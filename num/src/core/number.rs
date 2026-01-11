@@ -1,10 +1,6 @@
-use crate::core::{
-    one::One,
-    ops::{Additive, Multiplicative},
-    zero::Zero,
-};
+use super::{One, Zero};
 
-/// 数字
-pub trait Number: Copy + Clone + PartialEq + Zero + One + Additive + Multiplicative {}
+/// 数值类型
+pub trait Number: Zero + One + Copy + Clone + PartialEq + core::fmt::Debug {}
 
-impl<T> Number for T where T: Copy + Clone + PartialEq + Zero + One + Additive + Multiplicative {}
+impl<T> Number for T where T: Zero + One + Copy + Clone + PartialEq + core::fmt::Debug {}
