@@ -1,6 +1,9 @@
 use std::{fmt::Display, str::FromStr};
 
-use crate::{core::{ApproxEq, Float, Norm, Number, One, Zero}, error::NumError};
+use crate::{
+    core::{ApproxEq, Float, Norm, Number, One, Zero},
+    error::NumError,
+};
 
 /// 复数语义
 pub trait ComplexNumber: Number {
@@ -141,7 +144,7 @@ impl<T: Float + ApproxEq> ApproxEq for Complex<T> {
 impl<T: Float> FromStr for Complex<T> {
     type Err = NumError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(_s: &str) -> Result<Self, Self::Err> {
         todo!()
     }
 }

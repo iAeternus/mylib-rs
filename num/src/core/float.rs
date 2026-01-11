@@ -20,20 +20,37 @@ pub trait Float: Number + Signed {
     /// 是否为有限值
     fn is_finite(self) -> bool;
 
-    /// 平方根
+    /// 返回平方根
     fn sqrt(self) -> Self;
 
-    /// 整数幂
+    /// 返回整数幂
     fn powi(self, n: i32) -> Self;
 
+    /// 返回指数函数 e^x
     fn exp(self) -> Self;
+
+    /// 返回自然对数 ln(x)
     fn ln(self) -> Self;
+
+    /// 返回正弦 sin(x)
     fn sin(self) -> Self;
+
+    /// 返回余弦 cos(x)
     fn cos(self) -> Self;
+
+    /// 返回正切 tan(x)
     fn tan(self) -> Self;
+
+    /// 返回反正弦 asin(x)，结果范围 [-π/2, π/2]
     fn asin(self) -> Self;
+
+    /// 返回反余弦 acos(x)，结果范围 [0, π]
     fn acos(self) -> Self;
+
+    /// 返回反正切 atan(x)，结果范围 [-π/2, π/2]
     fn atan(self) -> Self;
+
+    /// 返回两个浮点数的四象限反正切 atan2(y, x)，结果范围 [-π, π]
     fn atan2(self, other: Self) -> Self;
 }
 
