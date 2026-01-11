@@ -154,6 +154,51 @@ macro_rules! impl_float {
                 fn powi(self, n: i32) -> Self {
                     self.powi(n)
                 }
+
+                #[inline]
+                fn exp(self) -> Self {
+                    self.exp()
+                }
+
+                #[inline]
+                fn ln(self) -> Self {
+                    self.ln()
+                }
+
+                #[inline]
+                fn sin(self) -> Self {
+                    self.sin()
+                }
+
+                #[inline]
+                fn cos(self) -> Self {
+                    self.cos()
+                }
+
+                #[inline]
+                fn tan(self) -> Self {
+                    self.tan()
+                }
+
+                #[inline]
+                fn asin(self) -> Self {
+                    self.asin()
+                }
+
+                #[inline]
+                fn acos(self) -> Self {
+                    self.acos()
+                }
+
+                #[inline]
+                fn atan(self) -> Self {
+                    self.atan()
+                }
+
+                #[inline]
+                fn atan2(self, other: Self) -> Self {
+                    self.atan2(other)
+                }
             }
         )+
     };

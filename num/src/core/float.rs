@@ -25,6 +25,16 @@ pub trait Float: Number + Signed {
 
     /// 整数幂
     fn powi(self, n: i32) -> Self;
+
+    fn exp(self) -> Self;
+    fn ln(self) -> Self;
+    fn sin(self) -> Self;
+    fn cos(self) -> Self;
+    fn tan(self) -> Self;
+    fn asin(self) -> Self;
+    fn acos(self) -> Self;
+    fn atan(self) -> Self;
+    fn atan2(self, other: Self) -> Self;
 }
 
 /// 近似相等（Approximate Equality）
@@ -85,7 +95,7 @@ pub trait Float: Number + Signed {
 ///
 /// ```rust
 /// use num::core::ApproxEq;
-/// 
+///
 /// let a = 1.0_f64;
 /// let b = 1.0 + 1e-12;
 ///

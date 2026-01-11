@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
-use crate::core::{ApproxEq, Float, Norm, Number, One, Zero};
+use crate::{core::{ApproxEq, Float, Norm, Number, One, Zero}, error::NumError};
 
 /// 复数语义
 pub trait ComplexNumber: Number {
@@ -28,6 +28,41 @@ pub struct Complex<T: Float> {
 impl<T: Float> Complex<T> {
     pub fn new(re: T, im: T) -> Self {
         Self { re, im }
+    }
+
+    /// 返回复数的幅角 (radians)
+    pub fn arg(&self) -> T {
+        self.im.atan2(self.re)
+    }
+
+    /// 返回单位化复数
+    pub fn unit(&self) -> Self {
+        let n = self.norm();
+        if n.is_zero() {
+            Self::zero()
+        } else {
+            Self::new(self.re / n, self.im / n)
+        }
+    }
+
+    /// 返回复数的指数
+    pub fn exp(&self) -> Self {
+        let exp_re = self.re.exp();
+        Self::new(exp_re * self.im.cos(), exp_re * self.im.sin())
+    }
+
+    /// 返回复数的自然对数
+    pub fn ln(&self) -> Self {
+        Self::new(self.norm().ln(), self.arg())
+    }
+
+    /// 返回复数的幂
+    pub fn powf(&self, n: T) -> Self {
+        self.ln().scale(n).exp()
+    }
+
+    fn scale(&self, n: T) -> Self {
+        Self::new(self.re * n, self.im * n)
     }
 }
 
@@ -100,6 +135,14 @@ impl<T: Float> From<(T, T)> for Complex<T> {
 impl<T: Float + ApproxEq> ApproxEq for Complex<T> {
     fn approx_eq(&self, rhs: &Self, eps: f64) -> bool {
         self.re.approx_eq(&rhs.re, eps) && self.im.approx_eq(&rhs.im, eps)
+    }
+}
+
+impl<T: Float> FromStr for Complex<T> {
+    type Err = NumError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!()
     }
 }
 
