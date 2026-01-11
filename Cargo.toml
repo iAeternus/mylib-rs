@@ -1,5 +1,6 @@
 [workspace.package]
 authors = ["Ziwei Wu <w_ziwei2004@163.com>"]
+description = "My Rust Utilities"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/iAeternus/mylib-rs.git"
