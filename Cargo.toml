@@ -2,9 +2,9 @@
 authors = ["Ziwei Wu <w_ziwei2004@163.com>"]
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/iAeternus/mylib.git"
+repository = "https://github.com/iAeternus/mylib-rs.git"
 homepage = "https://github.com/iAeternus"
 
 [workspace]
-members = ["mylib","num"]
+members = ["mylib-rs","num"]
 resolver = "3"

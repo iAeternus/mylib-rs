@@ -1,4 +1,4 @@
-# **My Lib**
+# **mylib-rs**
 
 My Rust Utilities
 
