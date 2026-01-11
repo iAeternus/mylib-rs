@@ -1,11 +1,13 @@
+use std::fmt::Display;
+
 use crate::{
     core::{Integer, One, Signed, Zero},
-    error::NumResult,
+    error::{NumError, NumResult},
     frac::rational::Rational,
 };
 
 /// 分数
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Eq, Ord)]
 pub struct Frac<T: Integer> {
     /// 分子
     pub(crate) numer: T,
@@ -14,11 +16,23 @@ pub struct Frac<T: Integer> {
 }
 
 impl<T: Integer> Frac<T> {
+    /// 创建分数
+    ///
+    /// ### Notes
+    /// - 检查分母，自动约分
+    /// - 若分母为零，则panic
     pub fn new(numer: T, denom: T) -> Self {
         assert!(!denom.is_zero(), "denominator must not be zero");
         Self::new_unchecked(numer, denom)
     }
 
+    /// 尝试创建分数
+    ///
+    /// ### Notes
+    /// 检查分母，自动约分
+    ///
+    /// ### Return
+    /// 若分母为零，返回Err
     pub fn try_new(numer: T, denom: T) -> NumResult<Self> {
         if denom.is_zero() {
             return Err(crate::error::NumError::DivisionByZero);
@@ -34,6 +48,7 @@ impl<T: Integer> Frac<T> {
         f
     }
 
+    /// 规范化（约分）
     fn normalize(&mut self) {
         if self.denom.is_negative() {
             self.numer = -self.numer;
@@ -83,6 +98,12 @@ impl<T: Integer> Signed for Frac<T> {
     }
 }
 
+impl<T: Integer> Default for Frac<T> {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
 impl<T: Integer> Zero for Frac<T> {
     #[inline]
     fn zero() -> Self {
@@ -108,5 +129,37 @@ impl<T: Integer> One for Frac<T> {
 
     fn is_one(&self) -> bool {
         self.numer.is_one()
+    }
+}
+
+impl<T: Integer> PartialEq for Frac<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.numer * other.denom == other.numer * self.denom
+    }
+}
+
+impl<T: Integer> PartialOrd for Frac<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some((self.numer * other.denom).cmp(&(other.numer * self.denom)))
+    }
+}
+
+impl<T: Integer> From<T> for Frac<T> {
+    fn from(value: T) -> Self {
+        Self::new_unchecked(value, T::one())
+    }
+}
+
+impl<T: Integer> TryFrom<(T, T)> for Frac<T> {
+    type Error = NumError;
+
+    fn try_from((n, d): (T, T)) -> Result<Self, Self::Error> {
+        Self::try_new(n, d)
+    }
+}
+
+impl<T: Display + Integer> Display for Frac<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.numer, self.denom)
     }
 }

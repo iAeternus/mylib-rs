@@ -1,6 +1,12 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    iter::{Product, Sum},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
-use crate::{core::Integer, frac::frac::Frac};
+use crate::{
+    core::{Integer, one::One, zero::Zero},
+    frac::frac::Frac,
+};
 
 impl<T: Integer> Neg for Frac<T> {
     type Output = Self;
@@ -77,6 +83,18 @@ impl<T: Integer> DivAssign for Frac<T> {
     fn div_assign(&mut self, rhs: Self) {
         self.numer *= rhs.denom;
         self.denom *= rhs.numer;
+    }
+}
+
+impl<T: Integer> Sum for Frac<T> {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
+    }
+}
+
+impl<T: Integer> Product for Frac<T> {
+    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::one(), |a, b| a * b)
     }
 }
 
