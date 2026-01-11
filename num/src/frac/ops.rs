@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     core::{Integer, one::One, zero::Zero},
-    frac::frac::Frac,
+    frac::Frac,
 };
 
 impl<T: Integer> Neg for Frac<T> {
@@ -54,7 +54,7 @@ impl<T: Integer> Div for Frac<T> {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        Self::new_unchecked(self.numer * rhs.denom, self.denom * rhs.numer)
+        Self::new(self.numer * rhs.denom, self.denom * rhs.numer)
     }
 }
 

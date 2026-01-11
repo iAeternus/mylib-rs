@@ -24,8 +24,3 @@ pub trait Norm {
     /// 模的平方
     fn norm_sq(&self) -> Self::Output;
 }
-
-/// 近似相等比较
-pub trait ApproxEq<Rhs = Self> {
-    fn approx_eq(&self, rhs: &Rhs, eps: f64) -> bool;
-}

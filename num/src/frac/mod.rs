@@ -3,3 +3,4 @@ pub mod ops;
 pub mod rational;
 
 pub use frac::Frac;
+pub use rational::*;

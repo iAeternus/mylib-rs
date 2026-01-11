@@ -136,6 +136,11 @@ macro_rules! impl_float {
                 }
 
                 #[inline]
+                fn is_infinite(self) -> bool {
+                    self.is_infinite()
+                }
+
+                #[inline]
                 fn is_finite(self) -> bool {
                     self.is_finite()
                 }
@@ -155,3 +160,97 @@ macro_rules! impl_float {
 }
 
 impl_float!(f32, f64);
+
+macro_rules! impl_approx_eq_float {
+    ($t:ty) => {
+        impl ApproxEq<$t> for $t {
+            #[inline]
+            fn approx_eq(&self, rhs: &$t, eps: f64) -> bool {
+                if eps < 0.0 {
+                    return false;
+                }
+
+                if self.is_nan() || rhs.is_nan() {
+                    return false;
+                }
+
+                if self.is_infinite() || rhs.is_infinite() {
+                    return self == rhs;
+                }
+
+                if self == rhs {
+                    return true;
+                }
+
+                let diff = (*self - *rhs).abs();
+                let eps = eps as $t;
+                if diff <= eps {
+                    return true;
+                }
+
+                // 相对误差
+                let scale = self.abs().max(rhs.abs());
+                diff <= eps * scale
+            }
+        }
+    };
+}
+
+impl_approx_eq_float!(f32);
+impl_approx_eq_float!(f64);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_reflexivity() {
+        let x = 1.2345_f64;
+        assert!(x.approx_eq(&x, 0.0));
+    }
+
+    #[test]
+    fn test_symmetry() {
+        let a = 1.0_f64;
+        let b = 1.0000000001_f64;
+        assert!(a.approx_eq(&b, 1e-9));
+        assert!(b.approx_eq(&a, 1e-9));
+    }
+
+    #[test]
+    fn test_absolute_tolerance_near_zero() {
+        let a = 1e-10_f64;
+        let b = -1e-10_f64;
+
+        // diff = 2e-10 <= eps
+        assert!(a.approx_eq(&b, 1e-9));
+        assert!(!a.approx_eq(&b, 1e-11));
+    }
+
+    #[test]
+    fn test_relative_tolerance_large_numbers() {
+        let a = 1e100_f64;
+        let b = 1.0000000001e100_f64;
+
+        assert!(a.approx_eq(&b, 2e-10));
+        assert!(!a.approx_eq(&b, 5e-11));
+    }
+
+    #[test]
+    fn test_extreme_small_numbers() {
+        let a = 1e-30_f32;
+        let b = 1.1e-30_f32;
+
+        assert!(a.approx_eq(&b, 1e-1));
+    }
+
+    #[test]
+    fn test_rounding_boundary() {
+        let a = 1.0_f64;
+        let b = 1.0000000000000004_f64;
+
+        // diff ≈ 4.44e-16
+        assert!(a.approx_eq(&b, 1e-15));
+        assert!(!a.approx_eq(&b, 1e-17));
+    }
+}

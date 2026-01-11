@@ -1,6 +1,6 @@
 use crate::core::{Integer, Number, One, Signed};
 
-/// 有理数（分数）
+/// 有理数语义（分数）
 pub trait Rational: Number + Signed {
     /// 整数标量类型
     type Int: Integer;

@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
+name = "mylib"
+version = "0.1.0"
+dependencies = [
+ "num",
+]
+
+[[package]]
 name = "num"
 version = "0.1.0"

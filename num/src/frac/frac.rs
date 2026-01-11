@@ -22,7 +22,7 @@ impl<T: Integer> Frac<T> {
     /// - 检查分母，自动约分
     /// - 若分母为零，则panic
     pub fn new(numer: T, denom: T) -> Self {
-        assert!(!denom.is_zero(), "denominator must not be zero");
+        assert!(!denom.is_zero(), "division by zero");
         Self::new_unchecked(numer, denom)
     }
 
@@ -98,12 +98,6 @@ impl<T: Integer> Signed for Frac<T> {
     }
 }
 
-impl<T: Integer> Default for Frac<T> {
-    fn default() -> Self {
-        Self::zero()
-    }
-}
-
 impl<T: Integer> Zero for Frac<T> {
     #[inline]
     fn zero() -> Self {
@@ -129,6 +123,12 @@ impl<T: Integer> One for Frac<T> {
 
     fn is_one(&self) -> bool {
         self.numer.is_one()
+    }
+}
+
+impl<T: Integer> Default for Frac<T> {
+    fn default() -> Self {
+        Self::zero()
     }
 }
 
