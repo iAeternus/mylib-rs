@@ -1,4 +1,5 @@
-pub mod core;
-pub mod impls;
-pub mod frac;
 pub mod complex;
+pub mod core;
+pub mod error;
+pub mod frac;
+pub mod impls;

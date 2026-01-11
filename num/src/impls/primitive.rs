@@ -21,6 +21,11 @@ macro_rules! impl_zero_one {
                 fn one() -> Self {
                     $one
                 }
+
+                #[inline]
+                fn is_one(&self) -> bool {
+                    *self == $one
+                }
             }
         )+
     };
@@ -52,13 +57,13 @@ macro_rules! impl_signed_integer {
         $(
             impl Signed for $t {
                 #[inline]
-                fn is_negative(self) -> bool {
-                    self < 0
+                fn abs(self) -> Self {
+                    self.abs()
                 }
 
                 #[inline]
-                fn abs(self) -> Self {
-                    self.abs()
+                fn is_negative(self) -> bool {
+                    self < 0
                 }
             }
 
