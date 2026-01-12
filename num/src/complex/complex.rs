@@ -1,19 +1,19 @@
 use std::{fmt::Display, str::FromStr};
 
 use crate::{
-    core::{ApproxEq, Float, Norm, Number, One, Zero},
+    core::{ApproxEq, Float, Norm, Number, One, Signed, Zero},
     error::NumError,
 };
 
 /// 复数语义
 pub trait ComplexNumber: Number {
-    type Real: Number;
+    type Scalar: Number;
 
     /// 获取实部
-    fn re(&self) -> Self::Real;
+    fn re(&self) -> Self::Scalar;
 
     /// 获取虚部
-    fn im(&self) -> Self::Real;
+    fn im(&self) -> Self::Scalar;
 
     /// 返回复数的共轭
     fn conj(self) -> Self;
@@ -21,18 +21,28 @@ pub trait ComplexNumber: Number {
 
 /// 复数
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Complex<T: Float> {
+pub struct Complex<T: Number> {
     /// 实部
     pub(crate) re: T,
     /// 虚部
     pub(crate) im: T,
 }
 
-impl<T: Float> Complex<T> {
+impl<T: Number> Complex<T> {
     pub fn new(re: T, im: T) -> Self {
         Self { re, im }
     }
 
+    fn scale(&self, n: T) -> Self {
+        Self::new(self.re * n, self.im * n)
+    }
+
+    pub fn norm_sq(&self) -> T {
+        self.re * self.re + self.im * self.im
+    }
+}
+
+impl<T: Float> Complex<T> {
     /// 返回复数的幅角 (radians)
     pub fn arg(&self) -> T {
         self.im.atan2(self.re)
@@ -63,20 +73,16 @@ impl<T: Float> Complex<T> {
     pub fn powf(&self, n: T) -> Self {
         self.ln().scale(n).exp()
     }
-
-    fn scale(&self, n: T) -> Self {
-        Self::new(self.re * n, self.im * n)
-    }
 }
 
-impl<T: Float> ComplexNumber for Complex<T> {
-    type Real = T;
+impl<T: Number + Signed> ComplexNumber for Complex<T> {
+    type Scalar = T;
 
-    fn re(&self) -> Self::Real {
+    fn re(&self) -> Self::Scalar {
         self.re
     }
 
-    fn im(&self) -> Self::Real {
+    fn im(&self) -> Self::Scalar {
         self.im
     }
 
@@ -97,7 +103,7 @@ impl<T: Float> Norm for Complex<T> {
     }
 }
 
-impl<T: Float> Zero for Complex<T> {
+impl<T: Number> Zero for Complex<T> {
     fn zero() -> Self {
         Self::new(T::zero(), T::zero())
     }
@@ -107,7 +113,7 @@ impl<T: Float> Zero for Complex<T> {
     }
 }
 
-impl<T: Float> One for Complex<T> {
+impl<T: Number> One for Complex<T> {
     fn one() -> Self {
         Self::new(T::one(), T::zero())
     }
@@ -117,19 +123,19 @@ impl<T: Float> One for Complex<T> {
     }
 }
 
-impl<T: Float> Default for Complex<T> {
+impl<T: Number> Default for Complex<T> {
     fn default() -> Self {
         Self::zero()
     }
 }
 
-impl<T: Float> From<T> for Complex<T> {
+impl<T: Number> From<T> for Complex<T> {
     fn from(value: T) -> Self {
         Self::new(value, T::zero())
     }
 }
 
-impl<T: Float> From<(T, T)> for Complex<T> {
+impl<T: Number> From<(T, T)> for Complex<T> {
     fn from((re, im): (T, T)) -> Self {
         Self::new(re, im)
     }
@@ -141,7 +147,7 @@ impl<T: Float + ApproxEq> ApproxEq for Complex<T> {
     }
 }
 
-impl<T: Float> FromStr for Complex<T> {
+impl<T: Number> FromStr for Complex<T> {
     type Err = NumError;
 
     fn from_str(_s: &str) -> Result<Self, Self::Err> {
@@ -149,7 +155,7 @@ impl<T: Float> FromStr for Complex<T> {
     }
 }
 
-impl<T: Display + Float> Display for Complex<T> {
+impl<T: Display + Number + Signed> Display for Complex<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let re = self.re();
         let im = self.im();
@@ -198,11 +204,11 @@ mod test {
 
     #[test]
     fn test_conj() {
-        let a = Complex::new(3., 4.);
+        let a = Complex::new(3, 4);
 
         let conj = a.conj();
 
-        assert_eq!(Complex::new(3., -4.), conj);
+        assert_eq!(Complex::new(3, -4), conj);
     }
 
     #[test]
@@ -217,12 +223,24 @@ mod test {
     }
 
     #[test]
+    fn test_norm_sq() {
+        let a = Complex::new(3, 4);
+        let b = Complex::new(3., 4.);
+
+        let norm_sq_a = a.norm_sq();
+        let norm_sq_b = b.norm_sq();
+
+        assert_eq!(25, norm_sq_a);
+        assert_eq!(true, 25_f64.approx_eq(&norm_sq_b, f64::EPSILON));
+    }
+
+    #[test]
     fn test_fmt() {
-        let a = Complex::new(1., 2.);
-        let b = Complex::new(1., -2.);
-        let c = Complex::from(1.);
-        let d = Complex::new(0., 1.);
-        let e = Complex::new(0., 2.);
+        let a = Complex::new(1, 2);
+        let b = Complex::new(1, -2);
+        let c = Complex::from(1);
+        let d = Complex::new(0, 1);
+        let e = Complex::new(0, 2);
 
         println!("{}", a); // 1+2i
         println!("{}", b); // 1-2i
