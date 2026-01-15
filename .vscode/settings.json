@@ -1,9 +1,12 @@
 {
     "cSpell.words": [
+        "algods",
         "denormal",
+        "Deque",
         "impls",
         "mylib",
         "numer",
+        "smallvec",
         "Ziwei"
     ]
 }

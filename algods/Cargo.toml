@@ -1,0 +1,19 @@
+[package]
+name = "algods"
+version = "0.1.0"
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+smallvec = "1.15.1"
+
+[dev-dependencies]
+criterion = "0.8.1"
+
+[[bench]]
+name = "vec_tree"
+harness = false
