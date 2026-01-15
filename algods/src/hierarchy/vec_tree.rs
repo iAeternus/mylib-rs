@@ -1,20 +1,37 @@
 use smallvec::SmallVec;
 
-use crate::hierarchy::tree::{NodeId, Tree};
+use crate::{
+    error::{AlgodsError, AlgodsResult},
+    hierarchy::tree::{NodeId, Tree},
+};
 
 const INLINE_CHILDREN: usize = 4;
 
-/// 数组实现的有根树，适用于读多写少场景
+/// 数组实现的有根树（VecTree）
+///
+/// 适用于读多写少场景。底层使用 Vec 存储节点值和关系，
+/// 子节点使用 SmallVec 内联存储以减少小树的堆分配。
 pub struct VecTree<T> {
+    /// 节点值数组
     values: Vec<T>,
+    /// 父节点数组（根节点为 None）
     parents: Vec<Option<NodeId>>,
+    /// 子节点数组，每个节点存储自己的直接子节点
     children: Vec<SmallVec<[NodeId; INLINE_CHILDREN]>>,
+    /// 节点世代，用于防止悬垂引用
     generations: Vec<u32>,
+    /// 当前存活节点数量
     alive_count: usize,
 }
 
 impl<T> VecTree<T> {
     /// 创建一棵带根节点的树
+    ///
+    /// # 参数
+    /// * `value` - 根节点的值
+    ///
+    /// # 返回
+    /// 新创建的 VecTree 实例，根节点已经存在
     pub fn with_root(value: T) -> Self {
         let mut tree = Self {
             values: Vec::new(),
@@ -23,44 +40,48 @@ impl<T> VecTree<T> {
             generations: Vec::new(),
             alive_count: 0,
         };
-        tree.make_node(value, None);
+        tree.alloc_node(value, None);
         tree
     }
 
     #[inline]
-    fn make_node(&mut self, value: T, parent: Option<NodeId>) -> NodeId {
-        let index = self.values.len();
-        let generation = 0;
-        let id = NodeId { index, generation };
-
+    fn alloc_node(&mut self, value: T, parent: Option<NodeId>) -> NodeId {
+        let id = NodeId {
+            index: self.values.len(),
+            generation: 0,
+        };
         self.values.push(value);
         self.parents.push(parent);
         self.children.push(SmallVec::new());
-        self.generations.push(generation);
+        self.generations.push(0);
         self.alive_count += 1;
 
         if let Some(p) = parent {
-            debug_assert!(self.contains(p));
             self.children[p.index].push(id);
         }
-
         id
     }
 
-    #[inline]
-    fn exists(&self, node: NodeId) -> bool {
-        node.index < self.generations.len() && self.generations[node.index] == node.generation
+    fn check_alive(&self, node: NodeId) -> AlgodsResult<()> {
+        if node.index < self.generations.len() && self.generations[node.index] == node.generation {
+            Ok(())
+        } else {
+            Err(AlgodsError::InvalidNodeId)
+        }
     }
 
-    fn remove_inner(&mut self, node: NodeId) {
-        let idx = node.index;
-        for &c in self.children[idx].clone().iter() {
-            self.remove_inner(c);
+    fn remove_inner(&mut self, root: NodeId) {
+        let mut stack = vec![root];
+        while let Some(n) = stack.pop() {
+            let idx = n.index;
+            for &c in self.children[idx].iter() {
+                stack.push(c);
+            }
+            self.children[idx].clear();
+            self.parents[idx] = None;
+            self.generations[idx] += 1;
+            self.alive_count -= 1;
         }
-        self.children[idx].clear();
-        self.parents[idx] = None;
-        self.generations[idx] += 1;
-        self.alive_count -= 1;
     }
 }
 
@@ -75,56 +96,63 @@ impl<T> Tree for VecTree<T> {
     }
 
     fn contains(&self, node: NodeId) -> bool {
-        self.exists(node)
+        node.index < self.generations.len() && self.generations[node.index] == node.generation
     }
 
-    fn parent(&self, node: NodeId) -> Option<NodeId> {
-        self.exists(node)
-            .then(|| self.parents[node.index])
-            .flatten()
+    fn parent(&self, node: NodeId) -> AlgodsResult<Option<NodeId>> {
+        self.check_alive(node)?;
+        Ok(self.parents[node.index])
     }
 
-    fn children(&self, node: NodeId) -> &[NodeId] {
-        assert!(self.exists(node));
-        &self.children[node.index]
+    fn children(&self, node: NodeId) -> AlgodsResult<&[NodeId]> {
+        self.check_alive(node)?;
+        Ok(&self.children[node.index])
     }
 
-    fn value(&self, node: NodeId) -> &Self::Value {
-        assert!(self.exists(node));
-        &self.values[node.index]
+    fn value(&self, node: NodeId) -> AlgodsResult<&Self::Value> {
+        self.check_alive(node)?;
+        Ok(&self.values[node.index])
     }
 
-    fn value_mut(&mut self, node: NodeId) -> &mut Self::Value {
-        assert!(self.exists(node));
-        &mut self.values[node.index]
+    fn value_mut(&mut self, node: NodeId) -> AlgodsResult<&mut Self::Value> {
+        self.check_alive(node)?;
+        Ok(&mut self.values[node.index])
     }
 
-    fn add_child(&mut self, parent: NodeId, value: Self::Value) -> NodeId {
-        assert!(self.exists(parent));
-        self.make_node(value, Some(parent))
+    fn add_child(&mut self, parent: NodeId, value: T) -> AlgodsResult<NodeId> {
+        self.check_alive(parent)?;
+        Ok(self.alloc_node(value, Some(parent)))
     }
 
-    fn remove_subtree(&mut self, node: NodeId) {
-        if !self.exists(node) {
-            return; // no-op
+    fn remove_subtree(&mut self, node: NodeId) -> AlgodsResult<()> {
+        self.check_alive(node)?;
+        if node.index == 0 {
+            return Err(AlgodsError::CannotRemoveRoot);
         }
-        assert!(node.index != 0, "cannot remove root");
 
-        if let Some(p) = self.parents[node.index] {
-            self.children[p.index].retain(|&mut c| c != node);
-        }
+        let parent = self.parents[node.index].unwrap();
+        self.children[parent.index].retain(|&mut c| c != node);
 
         self.remove_inner(node);
+        Ok(())
     }
 
     fn size(&self) -> usize {
         self.alive_count
     }
+
+    fn parent_unchecked(&self, node: NodeId) -> Option<NodeId> {
+        unsafe { *self.parents.get_unchecked(node.index) }
+    }
+
+    fn children_unchecked(&self, node: NodeId) -> &[NodeId] {
+        unsafe { self.children.get_unchecked(node.index) }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::hierarchy::tree::Hierarchy;
+    use crate::hierarchy::hierarchy::Hierarchy;
 
     use super::*;
 
@@ -134,9 +162,9 @@ mod tests {
         let root = tree.root();
 
         assert!(tree.contains(root));
-        assert_eq!(*tree.value(root), 42);
-        assert!(tree.parent(root).is_none());
-        assert!(tree.children(root).is_empty());
+        assert_eq!(*tree.value(root).unwrap(), 42);
+        assert!(tree.parent(root).unwrap().is_none());
+        assert!(tree.children(root).unwrap().is_empty());
         assert_eq!(tree.size(), 1);
     }
 
@@ -145,13 +173,13 @@ mod tests {
         let mut tree = VecTree::with_root("root");
         let root = tree.root();
 
-        let a = tree.add_child(root, "a");
-        let b = tree.add_child(root, "b");
+        let a = tree.add_child(root, "a").unwrap();
+        let b = tree.add_child(root, "b").unwrap();
 
-        assert_eq!(tree.parent(a), Some(root));
-        assert_eq!(tree.parent(b), Some(root));
+        assert_eq!(tree.parent(a).unwrap(), Some(root));
+        assert_eq!(tree.parent(b).unwrap(), Some(root));
 
-        let children = tree.children(root);
+        let children = tree.children(root).unwrap();
         assert_eq!(children.len(), 2);
         assert!(children.contains(&a));
         assert!(children.contains(&b));
@@ -163,11 +191,11 @@ mod tests {
         let mut tree = VecTree::with_root(0);
         let root = tree.root();
 
-        let a = tree.add_child(root, 1);
-        let b = tree.add_child(a, 2);
-        let c = tree.add_child(b, 3);
+        let a = tree.add_child(root, 1).unwrap();
+        let b = tree.add_child(a, 2).unwrap();
+        let c = tree.add_child(b, 3).unwrap();
 
-        tree.remove_subtree(a);
+        tree.remove_subtree(a).unwrap();
 
         assert!(!tree.contains(a));
         assert!(!tree.contains(b));
@@ -175,7 +203,7 @@ mod tests {
 
         // root 仍然存在
         assert!(tree.contains(root));
-        assert!(tree.children(root).is_empty());
+        assert!(tree.children(root).unwrap().is_empty());
         assert_eq!(tree.size(), 1);
     }
 
@@ -184,10 +212,10 @@ mod tests {
         let mut tree = VecTree::with_root(0);
         let root = tree.root();
 
-        let a = tree.add_child(root, 1);
+        let a = tree.add_child(root, 1).unwrap();
         let stale = a;
 
-        tree.remove_subtree(a);
+        tree.remove_subtree(a).unwrap();
 
         // 原 NodeId 已悬垂
         assert!(!tree.contains(stale));
@@ -197,11 +225,15 @@ mod tests {
     fn dfs_traversal_order() {
         let mut tree = VecTree::with_root(0);
         let r = tree.root();
-        let a = tree.add_child(r, 1);
-        let _b = tree.add_child(r, 2);
-        let _c = tree.add_child(a, 3);
+        let a = tree.add_child(r, 1).unwrap();
+        let _b = tree.add_child(r, 2).unwrap();
+        let _c = tree.add_child(a, 3).unwrap();
 
-        let dfs: Vec<_> = tree.dfs_iter(r).map(|n| *tree.value(n)).collect();
+        let dfs: Vec<_> = tree
+            .dfs_iter(r)
+            .unwrap()
+            .map(|n| *tree.value(n).unwrap())
+            .collect();
         assert_eq!(dfs, vec![0, 1, 3, 2]);
     }
 
@@ -209,31 +241,37 @@ mod tests {
     fn bfs_traversal_order() {
         let mut tree = VecTree::with_root(0);
         let r = tree.root();
-        let a = tree.add_child(r, 1);
-        let _b = tree.add_child(r, 2);
-        let _c = tree.add_child(a, 3);
+        let a = tree.add_child(r, 1).unwrap();
+        let _b = tree.add_child(r, 2).unwrap();
+        let _c = tree.add_child(a, 3).unwrap();
 
-        let bfs: Vec<_> = tree.bfs_iter(r).map(|n| *tree.value(n)).collect();
+        let bfs: Vec<_> = tree
+            .bfs_iter(r)
+            .unwrap()
+            .map(|n| *tree.value(n).unwrap())
+            .collect();
         assert_eq!(bfs, vec![0, 1, 2, 3]);
     }
 
     #[test]
-    fn removing_nonexistent_node_is_noop() {
+    fn removing_nonexistent_node_returns_error() {
         let mut tree = VecTree::with_root(1);
         let fake = NodeId {
             index: 100,
             generation: 0,
         };
 
-        tree.remove_subtree(fake); // should not panic
+        // remove_subtree 返回 InvalidNodeId 错误
+        let res = tree.remove_subtree(fake);
+        assert!(matches!(res, Err(AlgodsError::InvalidNodeId)));
         assert_eq!(tree.size(), 1);
     }
 
     #[test]
-    #[should_panic(expected = "cannot remove root")]
-    fn removing_root_panics() {
+    fn removing_root_returns_error() {
         let mut tree = VecTree::with_root(1);
         let root = tree.root();
-        tree.remove_subtree(root);
+        let res = tree.remove_subtree(root);
+        assert!(matches!(res, Err(AlgodsError::CannotRemoveRoot)));
     }
 }
