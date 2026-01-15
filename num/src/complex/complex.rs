@@ -195,7 +195,7 @@ impl<T: Display + Number + Signed> Display for Complex<T> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use core::f64;
 
     use crate::core::ApproxEq;

@@ -9,4 +9,4 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-num = { path = "../num", version = "0.1.0"}
+num = { path = "../num", version = "0.1.0" }

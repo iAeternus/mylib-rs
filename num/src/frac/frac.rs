@@ -23,7 +23,7 @@ impl<T: Integer> Frac<T> {
     /// - 若分母为零，则panic
     pub fn new(numer: T, denom: T) -> Self {
         assert!(!denom.is_zero(), "division by zero");
-        Self::new_unchecked(numer, denom)
+        unsafe { Self::new_unchecked(numer, denom) }
     }
 
     /// 尝试创建分数
@@ -37,19 +37,32 @@ impl<T: Integer> Frac<T> {
         if denom.is_zero() {
             return Err(crate::error::NumError::DivisionByZero);
         }
-        Ok(Self::new_unchecked(numer, denom))
+        Ok(unsafe { Self::new_unchecked(numer, denom) })
     }
 
+    /// 创建分数，不做除零检查
+    ///
+    /// ### Safety
     /// 调用者必须保证分母非 0，否则行为未定义（panic）
     #[inline(always)]
-    pub(crate) fn new_unchecked(numer: T, denom: T) -> Self {
+    pub unsafe fn new_unchecked(numer: T, denom: T) -> Self {
         let mut f = Self { numer, denom };
         f.normalize();
         f
     }
 
     /// 规范化（约分）
+    #[inline]
     fn normalize(&mut self) {
+        if self.denom.is_one() {
+            return;
+        }
+
+        if self.numer.is_zero() {
+            self.denom = T::one();
+            return;
+        }
+        
         if self.denom.is_negative() {
             self.numer = -self.numer;
             self.denom = -self.denom;
@@ -146,7 +159,7 @@ impl<T: Integer> PartialOrd for Frac<T> {
 
 impl<T: Integer> From<T> for Frac<T> {
     fn from(value: T) -> Self {
-        Self::new_unchecked(value, T::one())
+        unsafe { Self::new_unchecked(value, T::one()) }
     }
 }
 

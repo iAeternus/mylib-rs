@@ -24,10 +24,12 @@ impl<T: Integer> Add for Frac<T> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Self::new_unchecked(
-            self.numer * rhs.denom + self.denom * rhs.numer,
-            self.denom * rhs.denom,
-        )
+        unsafe {
+            Self::new_unchecked(
+                self.numer * rhs.denom + self.denom * rhs.numer,
+                self.denom * rhs.denom,
+            )
+        }
     }
 }
 
@@ -35,10 +37,12 @@ impl<T: Integer> Sub for Frac<T> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self::new_unchecked(
-            self.numer * rhs.denom - self.denom * rhs.numer,
-            self.denom * rhs.denom,
-        )
+        unsafe {
+            Self::new_unchecked(
+                self.numer * rhs.denom - self.denom * rhs.numer,
+                self.denom * rhs.denom,
+            )
+        }
     }
 }
 
@@ -46,7 +50,7 @@ impl<T: Integer> Mul for Frac<T> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        Self::new_unchecked(self.numer * rhs.numer, self.denom * rhs.denom)
+        unsafe { Self::new_unchecked(self.numer * rhs.numer, self.denom * rhs.denom) }
     }
 }
 
