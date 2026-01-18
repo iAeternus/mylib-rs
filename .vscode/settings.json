@@ -3,9 +3,11 @@
         "algods",
         "denormal",
         "Deque",
+        "fenwick",
         "impls",
         "mylib",
         "numer",
+        "rbtree",
         "reved",
         "smallvec",
         "Ziwei"
