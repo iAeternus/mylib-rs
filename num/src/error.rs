@@ -1,4 +1,5 @@
 use core::fmt;
+use std::fmt::write;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NumError {
@@ -19,6 +20,9 @@ pub enum NumError {
 
     /// 非方阵操作
     NotSquareMatrix { rows: usize, cols: usize },
+
+    /// 高精度整数转换错误
+    ParseBigIntError,
 }
 
 pub type NumResult<T> = core::result::Result<T, NumError>;
@@ -38,6 +42,7 @@ impl fmt::Display for NumError {
             NumError::NotSquareMatrix { rows, cols } => {
                 write!(f, "matrix is not square ({}x{})", rows, cols)
             }
+            NumError::ParseBigIntError => write!(f, "parse big int error"),
         }
     }
 }

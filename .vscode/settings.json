@@ -1,10 +1,12 @@
 {
     "cSpell.words": [
         "algods",
+        "bignum",
         "denormal",
         "Deque",
         "fenwick",
         "impls",
+        "Karatsuba",
         "mylib",
         "numer",
         "rbtree",

@@ -9,6 +9,7 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+smallvec = "1.15.1"
 
 [features]
 default = []

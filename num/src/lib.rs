@@ -11,3 +11,5 @@ pub mod frac;
 pub mod impls;
 #[cfg(not(feature = "core"))]
 pub mod vector;
+#[cfg(not(feature = "core"))]
+pub mod big_num;
