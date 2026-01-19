@@ -15,7 +15,9 @@
         "rbtree",
         "reved",
         "smallvec",
+        "submatrix",
         "Tukey",
+        "vecs",
         "Ziwei"
     ]
 }

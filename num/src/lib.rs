@@ -12,4 +12,6 @@ pub mod frac;
 #[cfg(not(feature = "core"))]
 pub mod impls;
 #[cfg(not(feature = "core"))]
+pub mod matrix;
+#[cfg(not(feature = "core"))]
 pub mod vector;
