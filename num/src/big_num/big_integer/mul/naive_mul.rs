@@ -7,10 +7,6 @@ pub struct NaiveMul;
 
 impl BigIntMul for NaiveMul {
     fn mul(lhs: &BigInteger, rhs: &BigInteger) -> BigInteger {
-        if lhs.is_zero() || rhs.is_zero() {
-            return BigInteger::zero();
-        }
-
         let a_len = lhs.digits.len();
         let b_len = rhs.digits.len();
         let mut res: Vec<i64> = vec![0; a_len + b_len];

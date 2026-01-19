@@ -176,10 +176,6 @@ impl FFTMul {
 
 impl BigIntMul for FFTMul {
     fn mul(lhs: &BigInteger, rhs: &BigInteger) -> BigInteger {
-        if lhs.is_zero() || rhs.is_zero() {
-            return BigInteger::zero();
-        }
-
         let mut pool = Vec::new();
         let mut result = Self::multiply_with_pool(lhs, rhs, &mut pool);
 

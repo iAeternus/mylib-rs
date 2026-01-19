@@ -22,14 +22,6 @@ pub struct MatrixViewMut<'a, T: Number> {
 }
 
 impl<'a, T: Number> MatrixView<'a, T> {
-    #[inline]
-    unsafe fn get_unchecked(&self, i: usize, j: usize) -> &T {
-        unsafe {
-            self.matrix
-                .get_unchecked(self.row_range.start + i, self.col_range.start + j)
-        }
-    }
-
     /// 转换为矩阵，需要克隆数据
     pub fn to_matrix(&self) -> Matrix<T> {
         let rows = self.rows();
@@ -50,14 +42,6 @@ impl<'a, T: Number> MatrixView<'a, T> {
 }
 
 impl<'a, T: Number> MatrixViewMut<'a, T> {
-    #[inline]
-    pub unsafe fn get_unchecked(&self, i: usize, j: usize) -> &T {
-        unsafe {
-            self.matrix
-                .get_unchecked(self.row_range.start + i, self.col_range.start + j)
-        }
-    }
-
     #[inline]
     pub fn get_mut(&mut self, i: usize, j: usize) -> Option<&mut T> {
         if i >= self.rows() || j >= self.cols() {
@@ -95,6 +79,14 @@ impl<'a, T: Number> MatrixBase<T> for MatrixView<'a, T> {
             unsafe { Some(self.get_unchecked(i, j)) }
         }
     }
+
+    #[inline]
+    unsafe fn get_unchecked(&self, i: usize, j: usize) -> &T {
+        unsafe {
+            self.matrix
+                .get_unchecked(self.row_range.start + i, self.col_range.start + j)
+        }
+    }
 }
 
 impl<'a, T: Number> MatrixBase<T> for MatrixViewMut<'a, T> {
@@ -114,6 +106,14 @@ impl<'a, T: Number> MatrixBase<T> for MatrixViewMut<'a, T> {
             None
         } else {
             unsafe { Some(self.get_unchecked(i, j)) }
+        }
+    }
+
+    #[inline]
+    unsafe fn get_unchecked(&self, i: usize, j: usize) -> &T {
+        unsafe {
+            self.matrix
+                .get_unchecked(self.row_range.start + i, self.col_range.start + j)
         }
     }
 }

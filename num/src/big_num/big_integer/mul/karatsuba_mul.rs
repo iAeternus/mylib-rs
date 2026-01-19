@@ -64,10 +64,6 @@ impl KaratsubaMul {
 
 impl BigIntMul for KaratsubaMul {
     fn mul(lhs: &BigInteger, rhs: &BigInteger) -> BigInteger {
-        if lhs.is_zero() || rhs.is_zero() {
-            return BigInteger::zero();
-        }
-
         let mut res = Self::karatsuba(lhs, rhs);
         res.sign = lhs.sign ^ rhs.sign;
         res

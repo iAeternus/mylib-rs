@@ -1,4 +1,5 @@
 use core::fmt;
+use std::fmt::write;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NumError {
@@ -18,10 +19,13 @@ pub enum NumError {
     MatrixSizeMismatch { expect: usize, actual: usize },
 
     /// 矩阵维度错误
-    MatrixDimensionMismatch {
+    MatrixShapeMismatch {
         expect: (usize, usize),
         actual: (usize, usize),
     },
+
+    /// 矩阵不能相乘
+    MatrixCannotMul { lhs_col: usize, rhs_row: usize },
 
     /// 下标越界
     IndexOutOfBounds,
@@ -52,7 +56,7 @@ impl fmt::Display for NumError {
                     expect, actual
                 )
             }
-            NumError::MatrixDimensionMismatch {
+            NumError::MatrixShapeMismatch {
                 expect: (e_rows, e_cols),
                 actual: (a_rows, a_cols),
             } => {
@@ -60,6 +64,13 @@ impl fmt::Display for NumError {
                     f,
                     "matrix dimension mismatch: expect matrix ({}x{}), actual matrix ({}x{})",
                     e_rows, e_cols, a_rows, a_cols
+                )
+            }
+            NumError::MatrixCannotMul { lhs_col, rhs_row } => {
+                write!(
+                    f,
+                    "matrices cannot be multiplied, lhs_col: {}, rhs_row: {}",
+                    lhs_col, rhs_row
                 )
             }
             NumError::NotSquareMatrix { rows, cols } => {

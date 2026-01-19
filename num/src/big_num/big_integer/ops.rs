@@ -26,7 +26,7 @@ impl BitXor for Sign {
     }
 }
 
-impl<'a> Neg for &'a BigInteger {
+impl Neg for &BigInteger {
     type Output = BigInteger;
 
     fn neg(self) -> BigInteger {
@@ -51,10 +51,10 @@ impl Neg for BigInteger {
     }
 }
 
-impl<'a, 'b> Add<&'b BigInteger> for &'a BigInteger {
+impl Add<&BigInteger> for &BigInteger {
     type Output = BigInteger;
 
-    fn add(self, rhs: &'b BigInteger) -> BigInteger {
+    fn add(self, rhs: &BigInteger) -> BigInteger {
         match (self.sign, rhs.sign) {
             (Sign::Positive, Sign::Positive) => {
                 let mut r = BigInteger::abs_add(self, rhs);
@@ -79,15 +79,15 @@ impl Add for BigInteger {
     }
 }
 
-impl<'a> Add<&'a BigInteger> for BigInteger {
+impl Add<&BigInteger> for BigInteger {
     type Output = BigInteger;
 
-    fn add(self, rhs: &'a BigInteger) -> BigInteger {
+    fn add(self, rhs: &BigInteger) -> BigInteger {
         &self + rhs
     }
 }
 
-impl<'a> Add<BigInteger> for &'a BigInteger {
+impl Add<BigInteger> for &BigInteger {
     type Output = BigInteger;
 
     fn add(self, rhs: BigInteger) -> BigInteger {
@@ -95,10 +95,10 @@ impl<'a> Add<BigInteger> for &'a BigInteger {
     }
 }
 
-impl<'a, 'b> Sub<&'b BigInteger> for &'a BigInteger {
+impl Sub<&BigInteger> for &BigInteger {
     type Output = BigInteger;
 
-    fn sub(self, rhs: &'b BigInteger) -> BigInteger {
+    fn sub(self, rhs: &BigInteger) -> BigInteger {
         match (self.sign, rhs.sign) {
             (Sign::Positive, Sign::Negative) => self + rhs.abs(),
             (Sign::Negative, Sign::Positive) => -(&self.abs() + rhs),
@@ -130,15 +130,15 @@ impl Sub for BigInteger {
     }
 }
 
-impl<'a> Sub<&'a BigInteger> for BigInteger {
+impl Sub<&BigInteger> for BigInteger {
     type Output = BigInteger;
 
-    fn sub(self, rhs: &'a BigInteger) -> BigInteger {
+    fn sub(self, rhs: &BigInteger) -> BigInteger {
         &self - rhs
     }
 }
 
-impl<'a> Sub<BigInteger> for &'a BigInteger {
+impl Sub<BigInteger> for &BigInteger {
     type Output = BigInteger;
 
     fn sub(self, rhs: BigInteger) -> BigInteger {
@@ -146,7 +146,7 @@ impl<'a> Sub<BigInteger> for &'a BigInteger {
     }
 }
 
-impl<'a> Mul<u32> for &'a BigInteger {
+impl Mul<u32> for &BigInteger {
     type Output = BigInteger;
 
     fn mul(self, rhs: u32) -> BigInteger {
@@ -162,10 +162,10 @@ impl Mul<u32> for BigInteger {
     }
 }
 
-impl<'a> Mul<&'a BigInteger> for u32 {
+impl Mul<&BigInteger> for u32 {
     type Output = BigInteger;
 
-    fn mul(self, rhs: &'a BigInteger) -> Self::Output {
+    fn mul(self, rhs: &BigInteger) -> Self::Output {
         rhs.mul_u32(self)
     }
 }
@@ -178,12 +178,15 @@ impl Mul<BigInteger> for u32 {
     }
 }
 
-impl<'a, 'b> Mul<&'b BigInteger> for &'a BigInteger {
+impl Mul<&BigInteger> for &BigInteger {
     type Output = BigInteger;
 
-    fn mul(self, rhs: &'b BigInteger) -> BigInteger {
-        let n = self.digits.len().max(rhs.digits.len());
+    fn mul(self, rhs: &BigInteger) -> BigInteger {
+        if self.is_zero() || rhs.is_zero() {
+            return BigInteger::zero();
+        }
 
+        let n = self.digits.len().max(rhs.digits.len());
         if n <= NaiveMul::limit() {
             NaiveMul::mul(self, rhs)
         } else if n <= KaratsubaMul::limit() {
@@ -208,15 +211,15 @@ impl Mul for BigInteger {
     }
 }
 
-impl<'a> Mul<&'a BigInteger> for BigInteger {
+impl Mul<&BigInteger> for BigInteger {
     type Output = BigInteger;
 
-    fn mul(self, rhs: &'a BigInteger) -> BigInteger {
+    fn mul(self, rhs: &BigInteger) -> BigInteger {
         &self * rhs
     }
 }
 
-impl<'a> Mul<BigInteger> for &'a BigInteger {
+impl Mul<BigInteger> for &BigInteger {
     type Output = BigInteger;
 
     fn mul(self, rhs: BigInteger) -> BigInteger {
@@ -224,11 +227,15 @@ impl<'a> Mul<BigInteger> for &'a BigInteger {
     }
 }
 
-impl<'a, 'b> Div<&'b BigInteger> for &'a BigInteger {
+impl Div<&BigInteger> for &BigInteger {
     type Output = BigInteger;
 
-    fn div(self, rhs: &'b BigInteger) -> BigInteger {
-        self.div_rem(rhs).unwrap().0
+    fn div(self, rhs: &BigInteger) -> BigInteger {
+        self.div_rem(rhs)
+            .unwrap_or_else(|err| {
+                panic!("{}", err);
+            })
+            .0
     }
 }
 
@@ -240,15 +247,15 @@ impl Div for BigInteger {
     }
 }
 
-impl<'a> Div<&'a BigInteger> for BigInteger {
+impl Div<&BigInteger> for BigInteger {
     type Output = BigInteger;
 
-    fn div(self, rhs: &'a BigInteger) -> BigInteger {
+    fn div(self, rhs: &BigInteger) -> BigInteger {
         &self / rhs
     }
 }
 
-impl<'a> Div<BigInteger> for &'a BigInteger {
+impl Div<BigInteger> for &BigInteger {
     type Output = BigInteger;
 
     fn div(self, rhs: BigInteger) -> BigInteger {
@@ -256,11 +263,15 @@ impl<'a> Div<BigInteger> for &'a BigInteger {
     }
 }
 
-impl<'a, 'b> Rem<&'b BigInteger> for &'a BigInteger {
+impl Rem<&BigInteger> for &BigInteger {
     type Output = BigInteger;
 
-    fn rem(self, rhs: &'b BigInteger) -> BigInteger {
-        self.div_rem(rhs).unwrap().1
+    fn rem(self, rhs: &BigInteger) -> BigInteger {
+        self.div_rem(rhs)
+            .unwrap_or_else(|err| {
+                panic!("{}", err);
+            })
+            .1
     }
 }
 
@@ -272,15 +283,15 @@ impl Rem for BigInteger {
     }
 }
 
-impl<'a> Rem<&'a BigInteger> for BigInteger {
+impl Rem<&BigInteger> for BigInteger {
     type Output = BigInteger;
 
-    fn rem(self, rhs: &'a BigInteger) -> BigInteger {
+    fn rem(self, rhs: &BigInteger) -> BigInteger {
         &self % rhs
     }
 }
 
-impl<'a> Rem<BigInteger> for &'a BigInteger {
+impl Rem<BigInteger> for &BigInteger {
     type Output = BigInteger;
 
     fn rem(self, rhs: BigInteger) -> BigInteger {
@@ -434,6 +445,14 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "division by zero")]
+    fn test_div_by_zero() {
+        let a = BigInteger::from(123456789i32);
+        let b = BigInteger::zero();
+        let _ = &a / &b;
+    }
+
+    #[test]
     fn test_rem() {
         let a = BigInteger::from(123456789i32);
         let b = BigInteger::from(10000i32);
@@ -443,5 +462,13 @@ mod tests {
         let a_neg = BigInteger::from(-123456789i32);
         let result_neg = &a_neg % &b;
         assert_eq!(result_neg.to_string(), "-6789");
+    }
+
+    #[test]
+    #[should_panic(expected = "division by zero")]
+    fn test_rem_by_zero() {
+        let a = BigInteger::from(123456789i32);
+        let b = BigInteger::zero();
+        let _ = &a % &b;
     }
 }

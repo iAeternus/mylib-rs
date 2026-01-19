@@ -1,4 +1,4 @@
-use std::ops::{Bound, Index, IndexMut, RangeBounds};
+use std::ops::{Bound, Index, IndexMut, Range, RangeBounds};
 
 use crate::{
     Number,
@@ -60,7 +60,7 @@ impl<T: Number> Matrix<T> {
             // 检查列数一致性
             match cols_count {
                 Some(expected) if row_len != expected => {
-                    return Err(NumError::MatrixDimensionMismatch {
+                    return Err(NumError::MatrixShapeMismatch {
                         expect: (rows_count, expected),
                         actual: (rows_count, row_len),
                     });
@@ -111,11 +111,6 @@ impl<T: Number> Matrix<T> {
             data[i * n + i] = T::one();
         }
         unsafe { Self::new_unchecked(n, n, data) }
-    }
-
-    #[inline]
-    pub unsafe fn get_unchecked(&self, i: usize, j: usize) -> &T {
-        &self.data[i * self.cols + j]
     }
 
     #[inline]
@@ -172,48 +167,14 @@ impl<T: Number> Matrix<T> {
         R: RangeBounds<usize>,
         C: RangeBounds<usize>,
     {
-        // 转换起始边界
-        let row_start = match rows.start_bound() {
-            Bound::Included(&i) => i,
-            Bound::Excluded(&i) => i + 1,
-            Bound::Unbounded => 0,
-        };
+        let row_range = Self::bounds_to_range(rows, self.rows)?;
+        let col_range = Self::bounds_to_range(cols, self.cols)?;
 
-        // 转换结束边界
-        let row_end = match rows.end_bound() {
-            Bound::Included(&i) => i + 1,
-            Bound::Excluded(&i) => i,
-            Bound::Unbounded => self.rows,
-        };
-
-        // 转换起始边界
-        let col_start = match cols.start_bound() {
-            Bound::Included(&i) => i,
-            Bound::Excluded(&i) => i + 1,
-            Bound::Unbounded => 0,
-        };
-
-        // 转换结束边界
-        let col_end = match cols.end_bound() {
-            Bound::Included(&i) => i + 1,
-            Bound::Excluded(&i) => i,
-            Bound::Unbounded => self.cols,
-        };
-
-        // 验证范围有效性
-        if row_start <= row_end
-            && col_start <= col_end
-            && row_end <= self.rows
-            && col_end <= self.cols
-        {
-            Some(MatrixView {
-                matrix: self,
-                row_range: row_start..row_end,
-                col_range: col_start..col_end,
-            })
-        } else {
-            None
-        }
+        Some(MatrixView {
+            matrix: self,
+            row_range,
+            col_range,
+        })
     }
 
     /// 创建一个矩阵的可变视图
@@ -248,40 +209,31 @@ impl<T: Number> Matrix<T> {
         R: RangeBounds<usize>,
         C: RangeBounds<usize>,
     {
-        let row_start = match rows.start_bound() {
+        let row_range = Self::bounds_to_range(rows, self.rows)?;
+        let col_range = Self::bounds_to_range(cols, self.cols)?;
+
+        Some(MatrixViewMut {
+            matrix: self,
+            row_range,
+            col_range,
+        })
+    }
+
+    #[inline]
+    fn bounds_to_range<R: RangeBounds<usize>>(range: R, upper: usize) -> Option<Range<usize>> {
+        let start = match range.start_bound() {
             Bound::Included(&i) => i,
             Bound::Excluded(&i) => i + 1,
             Bound::Unbounded => 0,
         };
-
-        let row_end = match rows.end_bound() {
+        let end = match range.end_bound() {
             Bound::Included(&i) => i + 1,
             Bound::Excluded(&i) => i,
-            Bound::Unbounded => self.rows,
+            Bound::Unbounded => upper,
         };
 
-        let col_start = match cols.start_bound() {
-            Bound::Included(&i) => i,
-            Bound::Excluded(&i) => i + 1,
-            Bound::Unbounded => 0,
-        };
-
-        let col_end = match cols.end_bound() {
-            Bound::Included(&i) => i + 1,
-            Bound::Excluded(&i) => i,
-            Bound::Unbounded => self.cols,
-        };
-
-        if row_start <= row_end
-            && col_start <= col_end
-            && row_end <= self.rows
-            && col_end <= self.cols
-        {
-            Some(MatrixViewMut {
-                matrix: self,
-                row_range: row_start..row_end,
-                col_range: col_start..col_end,
-            })
+        if start <= end && end <= upper {
+            Some(start..end)
         } else {
             None
         }
@@ -352,6 +304,11 @@ impl<T: Number> MatrixBase<T> for Matrix<T> {
         } else {
             unsafe { Some(self.get_unchecked(i, j)) }
         }
+    }
+
+    #[inline]
+    unsafe fn get_unchecked(&self, i: usize, j: usize) -> &T {
+        &self.data[i * self.cols + j]
     }
 }
 
