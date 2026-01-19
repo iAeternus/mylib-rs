@@ -35,7 +35,7 @@ pub enum Sign {
 #[derive(Clone, Debug)]
 pub struct BigInteger {
     /// 符号位（正 / 负）
-    pub(crate) sign: Sign,
+    pub sign: Sign,
 
     /// 数值块（base = 10^8，小端序）
     pub digits: Vec<u32>,

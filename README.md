@@ -33,3 +33,10 @@ cargo doc --workspace --open
   * 树状数组：FenwickTree，数组实现，支持区间前缀和/更新，O(log n)
   * trie 树：Trie
   * hierarchy 层次结构库：包含 LCRS 封装层次结构 LCRSTree、Vec 存储层次结构 Tree，提供统一接口
+
+## Task
+
+### num crate 重构
+
+1. 运算底层编写独立函数，上层封装多种引用模式，并与多种标量互运算，使用宏简化
+2. unchecked 函数推荐加#[inline(always)]，将所有 unsafe 函数放在一个独立的 impl 块中

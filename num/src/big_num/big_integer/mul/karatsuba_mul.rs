@@ -71,7 +71,7 @@ impl BigIntMul for KaratsubaMul {
 
     #[inline]
     fn limit() -> usize {
-        1024 // 中等数字块阈值
+        256 // 中等数字块阈值
     }
 }
 

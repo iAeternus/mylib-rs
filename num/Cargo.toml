@@ -9,7 +9,12 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+criterion = "0.8.1"
 
 [features]
 default = []
 core = []
+
+[[bench]]
+name = "big_int_mul"
+harness = false
