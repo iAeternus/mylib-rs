@@ -1,7 +1,4 @@
-use crate::{
-    Zero,
-    big_num::big_integer::{big_integer::BigInteger, mul::mul::BigIntMul},
-};
+use crate::big_num::big_integer::{big_integer::BigInteger, mul::mul::BigIntMul};
 
 pub struct NaiveMul;
 
@@ -50,7 +47,7 @@ impl BigIntMul for NaiveMul {
 mod tests {
     use std::str::FromStr;
 
-    use crate::big_num::big_integer::big_integer::Sign;
+    use crate::{Zero, big_num::big_integer::big_integer::Sign};
 
     use super::*;
 

@@ -1,5 +1,4 @@
 use crate::{
-    Zero,
     big_num::big_integer::{
         big_integer::{BigInteger, Sign},
         mul::BigIntMul,
@@ -191,7 +190,7 @@ impl BigIntMul for FFTMul {
 
 #[cfg(test)]
 mod tests {
-    use crate::big_num::big_integer::big_integer::Sign;
+    use crate::{Zero, big_num::big_integer::big_integer::Sign};
 
     use super::*;
     use std::str::FromStr;
