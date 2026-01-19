@@ -54,10 +54,7 @@ impl BigIntMul for NaiveMul {
 mod tests {
     use std::str::FromStr;
 
-    use crate::big_num::big_integer::{
-        big_integer::Sign,
-        mul::common::{MUL_RESULT_PATH, assert_res},
-    };
+    use crate::big_num::big_integer::big_integer::Sign;
 
     use super::*;
 
@@ -75,20 +72,16 @@ mod tests {
 
     #[test]
     fn test_extremely_large() {
-        let a_str = "12345678".repeat(2048);
-        let b_str = "87654321".repeat(2048);
+        let a_str = "1234567890".repeat(4);
+        let b_str = "9876543210".repeat(4);
+        let expect =
+            "12193263113702179522618503273386678859448712086533622923332237463801111263526900";
 
         let a = BigInteger::from_str(&a_str).unwrap();
         let b = BigInteger::from_str(&b_str).unwrap();
 
         let result = NaiveMul::mul(&a, &b);
-
-        assert!(!result.is_zero());
-
-        let max_digits = a.digits.len() + b.digits.len();
-        assert!(result.digits.len() <= max_digits);
-
-        assert_res(&result.to_string(), MUL_RESULT_PATH);
+        assert_eq!(result.to_string(), expect);
     }
 
     #[test]

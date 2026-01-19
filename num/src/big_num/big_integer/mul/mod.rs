@@ -1,4 +1,3 @@
-mod common;
 mod fft_mul;
 mod karatsuba_mul;
 mod mul;
