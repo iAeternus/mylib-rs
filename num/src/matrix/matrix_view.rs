@@ -39,6 +39,27 @@ impl<'a, T: Number> MatrixView<'a, T> {
 
         unsafe { Matrix::new_unchecked(rows, cols, data) }
     }
+
+    #[inline]
+    pub fn transpose(&self) -> Matrix<T> {
+        let rows = self.rows();
+        let cols = self.cols();
+        let len = rows * cols;
+
+        let mut data = Vec::with_capacity(len);
+
+        unsafe {
+            data.set_len(len);
+
+            for i in 0..rows {
+                for j in 0..cols {
+                    *data.get_unchecked_mut(j * rows + i) = *self.get_unchecked(i, j);
+                }
+            }
+
+            Matrix::new_unchecked(cols, rows, data)
+        }
+    }
 }
 
 impl<'a, T: Number> MatrixViewMut<'a, T> {
@@ -56,6 +77,15 @@ impl<'a, T: Number> MatrixViewMut<'a, T> {
         unsafe {
             self.matrix
                 .get_mut_unchecked(self.row_range.start + i, self.col_range.start + j)
+        }
+    }
+
+    #[inline]
+    pub fn as_view(&self) -> MatrixView<'_, T> {
+        MatrixView {
+            matrix: &*self.matrix,
+            row_range: self.row_range.clone(),
+            col_range: self.col_range.clone(),
         }
     }
 }
@@ -204,5 +234,22 @@ mod tests {
 
         assert_eq!(m[(0, 1)], 100);
         assert_eq!(m[(1, 2)], 200);
+    }
+
+    #[test]
+    fn test_transpose() {
+        let m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+        let mt = m.slice(.., ..).unwrap().transpose();
+        assert_eq!(mt.rows(), 3);
+        assert_eq!(mt.cols(), 2);
+        assert_eq!(mt[(0, 0)], 1);
+        assert_eq!(mt[(0, 1)], 4);
+
+        let mut m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+        let mt = m.slice_mut(.., ..).unwrap().as_view().transpose();
+        assert_eq!(mt.rows(), 3);
+        assert_eq!(mt.cols(), 2);
+        assert_eq!(mt[(0, 0)], 1);
+        assert_eq!(mt[(0, 1)], 4);
     }
 }

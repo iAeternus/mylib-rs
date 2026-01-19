@@ -1,6 +1,6 @@
 use std::ops::{Add, Mul, Sub};
 
-use crate::matrix::elementwise::{matrix_add, matrix_mul, matrix_scalar_mul, matrix_sub};
+use crate::matrix::ops::{matrix_add, matrix_mul, matrix_scalar_mul, matrix_sub};
 use crate::{
     Number, Scalar,
     error::NumResult,

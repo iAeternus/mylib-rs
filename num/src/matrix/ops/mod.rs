@@ -1,2 +1,4 @@
-pub mod elementwise;
 pub mod macros;
+pub mod ops;
+
+use ops::*;

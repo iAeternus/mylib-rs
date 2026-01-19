@@ -29,14 +29,6 @@ impl<T: Number> Matrix<T> {
         unsafe { Ok(Self::new_unchecked(rows, cols, data)) }
     }
 
-    /// 使用一维数组创建矩阵，不做维度检查
-    ///
-    /// ### Safety
-    /// 调用者需保证维度正确
-    pub unsafe fn new_unchecked(rows: usize, cols: usize, data: Vec<T>) -> Self {
-        Self { rows, cols, data }
-    }
-
     /// 从行迭代器创建矩阵
     ///
     /// ## Param
@@ -85,6 +77,14 @@ impl<T: Number> Matrix<T> {
         unsafe { Ok(Self::new_unchecked(rows_count, cols_count, data)) }
     }
 
+    /// 使用val填充整个矩阵
+    #[inline]
+    pub fn fill(&mut self, val: T) {
+        for elem in &mut self.data {
+            *elem = val;
+        }
+    }
+
     /// 判断是否为方阵
     #[inline]
     pub fn is_square(&self) -> bool {
@@ -122,11 +122,6 @@ impl<T: Number> Matrix<T> {
         }
     }
 
-    #[inline]
-    pub unsafe fn get_mut_unchecked(&mut self, i: usize, j: usize) -> &mut T {
-        &mut self.data[i * self.cols + j]
-    }
-
     /// 创建一个矩阵的不可变视图
     ///
     /// 返回指定行范围和列范围的子矩阵视图，不进行数据复制。
@@ -162,6 +157,7 @@ impl<T: Number> Matrix<T> {
     /// let last_two_cols = m.slice(.., 2..).unwrap();   // 所有行，后两列
     /// let middle_rows = m.slice(1..=2, ..).unwrap();   // 第2-3行（包含第3行）
     /// ```
+    #[inline]
     pub fn slice<R, C>(&self, rows: R, cols: C) -> Option<MatrixView<'_, T>>
     where
         R: RangeBounds<usize>,
@@ -204,6 +200,7 @@ impl<T: Number> Matrix<T> {
     /// assert_eq!(m[(0, 0)], 100);
     /// assert_eq!(m[(1, 1)], 200);
     /// ```
+    #[inline]
     pub fn slice_mut<R, C>(&mut self, rows: R, cols: C) -> Option<MatrixViewMut<'_, T>>
     where
         R: RangeBounds<usize>,
@@ -240,6 +237,7 @@ impl<T: Number> Matrix<T> {
     }
 
     /// 获取行切片
+    #[inline]
     pub fn row(&self, row: usize) -> Option<&[T]> {
         if row < self.rows {
             let start = row * self.cols;
@@ -250,6 +248,7 @@ impl<T: Number> Matrix<T> {
     }
 
     /// 获取行切片，可变
+    #[inline]
     pub fn row_mut(&mut self, row: usize) -> Option<&mut [T]> {
         if row < self.rows {
             let start = row * self.cols;
@@ -260,6 +259,7 @@ impl<T: Number> Matrix<T> {
     }
 
     /// 获取列切片
+    #[inline]
     pub fn col(&self, col: usize) -> Option<impl Iterator<Item = &T> + '_> {
         if col < self.cols {
             Some(self.data.iter().skip(col).step_by(self.cols))
@@ -269,6 +269,7 @@ impl<T: Number> Matrix<T> {
     }
 
     /// 获取列切片，可变
+    #[inline]
     pub fn col_mut(&mut self, col: usize) -> Option<impl Iterator<Item = &mut T> + '_> {
         if col < self.cols {
             let cols = self.cols;
@@ -278,10 +279,345 @@ impl<T: Number> Matrix<T> {
         }
     }
 
-    /// 使用val填充整个矩阵
-    pub fn fill(&mut self, val: T) {
-        for elem in &mut self.data {
-            *elem = val;
+    /// 对行 i 应用一元操作
+    #[inline]
+    pub fn row_apply<F>(&mut self, i: usize, f: F) -> NumResult<()>
+    where
+        F: FnMut(T) -> T,
+    {
+        if i >= self.rows {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.row_apply_unchecked(i, f);
+            Ok(())
+        }
+    }
+
+    /// 对两行应用二元操作
+    #[inline]
+    pub fn row_apply2<F>(&mut self, dst: usize, src: usize, f: F) -> NumResult<()>
+    where
+        F: FnMut(T, T) -> T,
+    {
+        if dst >= self.rows || src >= self.rows {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.row_apply2_unchecked(dst, src, f);
+            Ok(())
+        }
+    }
+
+    /// 对列 j 应用一元操作
+    #[inline]
+    pub fn col_apply<F>(&mut self, j: usize, f: F) -> NumResult<()>
+    where
+        F: FnMut(T) -> T,
+    {
+        if j >= self.cols {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.col_apply_unchecked(j, f);
+            Ok(())
+        }
+    }
+
+    /// 对两列应用二元操作
+    #[inline]
+    pub fn col_apply2<F>(&mut self, dst: usize, src: usize, f: F) -> NumResult<()>
+    where
+        F: FnMut(T, T) -> T,
+    {
+        if dst >= self.rows || src >= self.rows {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.col_apply2_unchecked(dst, src, f);
+            Ok(())
+        }
+    }
+
+    /// 初等变换，行倍乘
+    #[inline]
+    pub fn row_scale(&mut self, i: usize, alpha: T) -> NumResult<()> {
+        if i >= self.rows {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.row_scale_unchecked(i, alpha);
+        }
+        Ok(())
+    }
+
+    /// 初等变换，行倍加
+    #[inline]
+    pub fn row_add(&mut self, dst: usize, src: usize, alpha: T) -> NumResult<()> {
+        if dst >= self.rows || src >= self.rows {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.row_add_unchecked(dst, src, alpha);
+        }
+        Ok(())
+    }
+
+    /// 初等变换，列倍乘
+    #[inline]
+    pub fn col_scale(&mut self, j: usize, alpha: T) -> NumResult<()> {
+        if j >= self.cols {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.col_scale_unchecked(j, alpha);
+        }
+        Ok(())
+    }
+
+    /// 初等变换，列倍加
+    #[inline]
+    pub fn col_add(&mut self, dst: usize, src: usize, alpha: T) -> NumResult<()> {
+        if dst >= self.cols || src >= self.cols {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        unsafe {
+            self.col_add_unchecked(dst, src, alpha);
+        }
+        Ok(())
+    }
+
+    /// 初等变换，行交换
+    #[inline]
+    pub fn row_swap(&mut self, i: usize, j: usize) -> NumResult<()> {
+        if i >= self.rows || j >= self.rows {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        if i == j {
+            return Ok(());
+        }
+
+        unsafe {
+            self.row_swap_unchecked(i, j);
+        }
+        Ok(())
+    }
+
+    /// 初等变换，列交换
+    #[inline]
+    pub fn col_swap(&mut self, i: usize, j: usize) -> NumResult<()> {
+        if i >= self.cols || j >= self.cols {
+            return Err(NumError::IndexOutOfBounds);
+        }
+
+        if i == j {
+            return Ok(());
+        }
+
+        unsafe {
+            self.col_swap_unchecked(i, j);
+        }
+        Ok(())
+    }
+
+    /// 转置
+    #[inline]
+    pub fn transpose(&self) -> Matrix<T> {
+        let rows = self.rows;
+        let cols = self.cols;
+        let len = rows * cols;
+
+        let mut data = Vec::with_capacity(len);
+
+        unsafe {
+            data.set_len(len);
+
+            for i in 0..rows {
+                let src_row = i * cols;
+                for j in 0..cols {
+                    *data.get_unchecked_mut(j * rows + i) = *self.data.get_unchecked(src_row + j);
+                }
+            }
+
+            Matrix::new_unchecked(cols, rows, data)
+        }
+    }
+}
+
+impl<T: Number> Matrix<T> {
+    /// 使用一维数组创建矩阵，不做维度检查
+    ///
+    /// ### Safety
+    /// 调用者需保证维度正确
+    pub unsafe fn new_unchecked(rows: usize, cols: usize, data: Vec<T>) -> Self {
+        Self { rows, cols, data }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn get_mut_unchecked(&mut self, i: usize, j: usize) -> &mut T {
+        &mut self.data[i * self.cols + j]
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn row_apply_unchecked<F>(&mut self, i: usize, mut f: F)
+    where
+        F: FnMut(T) -> T,
+    {
+        let start = i * self.cols;
+        let end = start + self.cols;
+
+        unsafe {
+            for x in self.data.get_unchecked_mut(start..end) {
+                *x = f(*x);
+            }
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn row_apply2_unchecked<F>(&mut self, dst: usize, src: usize, mut f: F)
+    where
+        F: FnMut(T, T) -> T,
+    {
+        let cols = self.cols;
+
+        unsafe {
+            let src_row: Vec<T> = self
+                .data
+                .get_unchecked(src * cols..(src + 1) * cols)
+                .to_vec();
+
+            let dst_slice = self.data.get_unchecked_mut(dst * cols..(dst + 1) * cols);
+
+            for (d, s) in dst_slice.iter_mut().zip(src_row) {
+                *d = f(*d, s);
+            }
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn col_apply_unchecked<F>(&mut self, j: usize, mut f: F)
+    where
+        F: FnMut(T) -> T,
+    {
+        let cols = self.cols;
+        unsafe {
+            for r in 0..self.rows {
+                let idx = r * cols + j;
+                let x = self.data.get_unchecked_mut(idx);
+                *x = f(*x);
+            }
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn col_apply2_unchecked<F>(&mut self, dst: usize, src: usize, mut f: F)
+    where
+        F: FnMut(T, T) -> T,
+    {
+        let cols = self.cols;
+
+        unsafe {
+            let src_col: Vec<T> = (0..self.rows)
+                .map(|r| *self.data.get_unchecked(r * cols + src))
+                .collect();
+
+            for (r, s) in (0..self.rows).zip(src_col) {
+                let idx = r * cols + dst;
+                let d = self.data.get_unchecked_mut(idx);
+                *d = f(*d, s);
+            }
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn row_scale_unchecked(&mut self, i: usize, alpha: T) {
+        unsafe {
+            self.row_apply_unchecked(i, |x| alpha * x);
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn row_add_unchecked(&mut self, dst: usize, src: usize, alpha: T) {
+        unsafe {
+            self.row_apply2_unchecked(dst, src, |d, s| d + alpha * s);
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn col_scale_unchecked(&mut self, j: usize, alpha: T) {
+        unsafe {
+            self.col_apply_unchecked(j, |x| alpha * x);
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn col_add_unchecked(&mut self, dst: usize, src: usize, alpha: T) {
+        unsafe {
+            self.col_apply2_unchecked(dst, src, |d, s| d + alpha * s);
+        }
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn row_swap_unchecked(&mut self, i: usize, j: usize) {
+        if i == j {
+            return;
+        }
+
+        let cols = self.cols;
+        let (i, j) = if i < j { (i, j) } else { (j, i) };
+
+        let a = i * cols;
+        let b = j * cols;
+
+        let (left, right) = self.data.split_at_mut(b);
+        let row_i = &mut left[a..a + cols];
+        let row_j = &mut right[..cols];
+
+        row_i.swap_with_slice(row_j);
+    }
+
+    /// ### Safety
+    /// 调用者需保证索引不越界
+    #[inline(always)]
+    pub unsafe fn col_swap_unchecked(&mut self, i: usize, j: usize) {
+        if i == j {
+            return;
+        }
+
+        let cols = self.cols;
+        for r in 0..self.rows {
+            let a = r * cols + i;
+            let b = r * cols + j;
+            self.data.swap(a, b);
         }
     }
 }
@@ -619,5 +955,91 @@ mod tests {
         let row1_mut = m.row_mut(0).unwrap();
         row1_mut[1] = 20;
         assert_eq!(m[(0, 1)], 20);
+    }
+
+    #[test]
+    fn test_row_scale() {
+        let mut m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+
+        m.row_scale(1, 10).unwrap();
+
+        assert_eq!(m[(0, 0)], 1);
+        assert_eq!(m[(1, 0)], 40);
+        assert_eq!(m[(1, 2)], 60);
+    }
+
+    #[test]
+    fn test_row_add() {
+        let mut m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+
+        // R0 = R0 + 2 * R1
+        m.row_add(0, 1, 2).unwrap();
+
+        assert_eq!(m[(0, 0)], 1 + 2 * 4);
+        assert_eq!(m[(0, 1)], 2 + 2 * 5);
+        assert_eq!(m[(0, 2)], 3 + 2 * 6);
+    }
+
+    #[test]
+    fn test_row_swap() {
+        let mut m = Matrix::from([[1, 2], [3, 4], [5, 6]]);
+
+        m.row_swap(0, 2).unwrap();
+
+        assert_eq!(m[(0, 0)], 5);
+        assert_eq!(m[(2, 1)], 2);
+    }
+
+    #[test]
+    fn test_col_scale() {
+        let mut m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+
+        m.col_scale(1, 10).unwrap();
+
+        assert_eq!(m[(0, 1)], 20);
+        assert_eq!(m[(1, 1)], 50);
+    }
+
+    #[test]
+    fn test_col_add() {
+        let mut m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+
+        // C2 = C2 + 3 * C0
+        m.col_add(2, 0, 3).unwrap();
+
+        assert_eq!(m[(0, 2)], 3 + 3 * 1);
+        assert_eq!(m[(1, 2)], 6 + 3 * 4);
+    }
+
+    #[test]
+    fn test_col_swap() {
+        let mut m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+
+        m.col_swap(0, 2).unwrap();
+
+        assert_eq!(m[(0, 0)], 3);
+        assert_eq!(m[(1, 2)], 4);
+    }
+
+    #[test]
+    fn test_out_of_bounds() {
+        let mut m = Matrix::<i32>::zero(2, 2);
+
+        assert!(m.row_scale(2, 1).is_err());
+        assert!(m.row_add(0, 2, 1).is_err());
+        assert!(m.col_scale(2, 1).is_err());
+        assert!(m.col_add(0, 2, 1).is_err());
+        assert!(m.row_swap(0, 2).is_err());
+        assert!(m.col_swap(1, 3).is_err());
+    }
+
+    #[test]
+    fn test_transpose() {
+        let m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+        let mt = m.transpose();
+        assert_eq!(mt.rows(), 3);
+        assert_eq!(mt.cols(), 2);
+        assert_eq!(mt[(0, 0)], 1);
+        assert_eq!(mt[(0, 1)], 4);
     }
 }
