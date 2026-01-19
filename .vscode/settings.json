@@ -2,9 +2,11 @@
     "cSpell.words": [
         "algods",
         "bignum",
+        "coeff",
         "denormal",
         "Deque",
         "fenwick",
+        "IFFT",
         "impls",
         "Karatsuba",
         "mylib",

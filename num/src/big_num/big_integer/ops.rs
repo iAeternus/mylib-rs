@@ -1,14 +1,30 @@
 use std::{
     cmp::Ordering,
     iter::{Product, Sum},
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
+    ops::{
+        Add, AddAssign, BitXor, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+    },
 };
 
 use crate::{
     Zero,
-    big_num::big_integer::big_integer::{BigInteger, Sign},
+    big_num::big_integer::{
+        big_integer::{BigInteger, Sign},
+        mul::{BigIntMul, FFTMul, KaratsubaMul, NaiveMul},
+    },
     core::one::One,
 };
+
+impl BitXor for Sign {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Sign::Positive, Sign::Positive) | (Sign::Negative, Sign::Negative) => Sign::Positive,
+            _ => Sign::Negative,
+        }
+    }
+}
 
 impl<'a> Neg for &'a BigInteger {
     type Output = BigInteger;
@@ -28,9 +44,9 @@ impl<'a> Neg for &'a BigInteger {
 }
 
 impl Neg for BigInteger {
-    type Output = BigInteger;
+    type Output = Self;
 
-    fn neg(self) -> BigInteger {
+    fn neg(self) -> Self::Output {
         -&self
     }
 }
@@ -56,9 +72,9 @@ impl<'a, 'b> Add<&'b BigInteger> for &'a BigInteger {
 }
 
 impl Add for BigInteger {
-    type Output = BigInteger;
+    type Output = Self;
 
-    fn add(self, rhs: BigInteger) -> BigInteger {
+    fn add(self, rhs: BigInteger) -> Self::Output {
         &self + &rhs
     }
 }
@@ -107,9 +123,9 @@ impl<'a, 'b> Sub<&'b BigInteger> for &'a BigInteger {
 }
 
 impl Sub for BigInteger {
-    type Output = BigInteger;
+    type Output = Self;
 
-    fn sub(self, rhs: BigInteger) -> BigInteger {
+    fn sub(self, rhs: BigInteger) -> Self::Output {
         &self - &rhs
     }
 }
@@ -130,18 +146,60 @@ impl<'a> Sub<BigInteger> for &'a BigInteger {
     }
 }
 
+impl<'a> Mul<u32> for &'a BigInteger {
+    type Output = BigInteger;
+
+    fn mul(self, rhs: u32) -> BigInteger {
+        self.mul_u32(rhs)
+    }
+}
+
+impl Mul<u32> for BigInteger {
+    type Output = Self;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        self.mul_u32(rhs)
+    }
+}
+
+impl<'a> Mul<&'a BigInteger> for u32 {
+    type Output = BigInteger;
+
+    fn mul(self, rhs: &'a BigInteger) -> Self::Output {
+        rhs.mul_u32(self)
+    }
+}
+
+impl Mul<BigInteger> for u32 {
+    type Output = BigInteger;
+
+    fn mul(self, rhs: BigInteger) -> Self::Output {
+        rhs.mul_u32(self)
+    }
+}
+
 impl<'a, 'b> Mul<&'b BigInteger> for &'a BigInteger {
     type Output = BigInteger;
 
-    fn mul(self, _rhs: &'b BigInteger) -> BigInteger {
-        todo!("naive / Karatsuba / FFT to be implemented")
+    fn mul(self, rhs: &'b BigInteger) -> BigInteger {
+        let n = self.digits.len().max(rhs.digits.len());
+
+        if n <= NaiveMul::limit() {
+            NaiveMul::mul(self, rhs)
+        } else if n <= KaratsubaMul::limit() {
+            KaratsubaMul::mul(self, rhs)
+        } else if n <= FFTMul::limit() {
+            FFTMul::mul(self, rhs)
+        } else {
+            panic!("Too large!")
+        }
     }
 }
 
 impl Mul for BigInteger {
-    type Output = BigInteger;
+    type Output = Self;
 
-    fn mul(self, rhs: BigInteger) -> BigInteger {
+    fn mul(self, rhs: BigInteger) -> Self::Output {
         &self * &rhs
     }
 }
@@ -171,9 +229,9 @@ impl<'a, 'b> Div<&'b BigInteger> for &'a BigInteger {
 }
 
 impl Div for BigInteger {
-    type Output = BigInteger;
+    type Output = Self;
 
-    fn div(self, rhs: BigInteger) -> BigInteger {
+    fn div(self, rhs: BigInteger) -> Self::Output {
         &self / &rhs
     }
 }
@@ -203,9 +261,9 @@ impl<'a, 'b> Rem<&'b BigInteger> for &'a BigInteger {
 }
 
 impl Rem for BigInteger {
-    type Output = BigInteger;
+    type Output = Self;
 
-    fn rem(self, rhs: BigInteger) -> BigInteger {
+    fn rem(self, rhs: BigInteger) -> Self::Output {
         &self % &rhs
     }
 }
@@ -327,16 +385,36 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "乘法还未实现"]
-    fn test_mul() {
+    fn test_mul_basic() {
+        // 短数字块 -> NaiveMul
         let a = BigInteger::from(1234i32);
         let b = BigInteger::from(5678i32);
         let result = &a * &b;
         assert_eq!(result.to_string(), "7006652");
 
+        // 负数测试
         let a_neg = BigInteger::from(-1234i32);
         let result_neg = &a_neg * &b;
         assert_eq!(result_neg.to_string(), "-7006652");
+
+        let b_neg = BigInteger::from(-5678i32);
+        let result_neg2 = &a * &b_neg;
+        assert_eq!(result_neg2.to_string(), "-7006652");
+
+        let both_neg = &a_neg * &b_neg;
+        assert_eq!(both_neg.to_string(), "7006652");
+    }
+
+    #[test]
+    fn test_mul_zero_one() {
+        let zero = BigInteger::zero();
+        let one = BigInteger::one();
+        let a = BigInteger::from(12345i32);
+
+        assert_eq!((&a * &zero).to_string(), "0");
+        assert_eq!((&zero * &a).to_string(), "0");
+        assert_eq!((&a * &one).to_string(), a.to_string());
+        assert_eq!((&one * &a).to_string(), a.to_string());
     }
 
     #[test]

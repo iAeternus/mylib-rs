@@ -43,6 +43,22 @@ impl<T: Number> Mul for Complex<T> {
     }
 }
 
+impl<T: Number> Mul<T> for Complex<T> {
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        Self::new(self.re * rhs, self.im * rhs)
+    }
+}
+
+// impl<T: Number> Mul<Complex<T>> for T {
+//     type Output = Complex<T>;
+
+//     fn mul(self, rhs: Complex<T>) -> Self::Output {
+//         Complex::new(self * rhs.re, self * rhs.im)
+//     }
+// }
+
 impl<T: Number> Div for Complex<T> {
     type Output = Self;
 
@@ -77,6 +93,13 @@ impl<T: Number> MulAssign for Complex<T> {
         let im = self.re * rhs.im + self.im * rhs.re;
         self.re = re;
         self.im = im;
+    }
+}
+
+impl<T: Number> MulAssign<T> for Complex<T> {
+    fn mul_assign(&mut self, rhs: T) {
+        self.re *= rhs;
+        self.im *= rhs;
     }
 }
 
@@ -168,7 +191,7 @@ mod tests {
     fn one_is_multiplicative_identity() {
         let z = Complex::new(-2, 5);
         assert_eq!(z * Complex::one(), z);
-        assert_eq!(Complex::one() * z, z);
+        assert_eq!(Complex::one() as Complex<i32> * z, z); // TODO: 很奇怪
     }
 
     #[test]
@@ -202,11 +225,7 @@ mod tests {
 
     #[test]
     fn test_sum() {
-        let v = vec![
-            Complex::new(1, 1),
-            Complex::new(2, -1),
-            Complex::new(-3, 0),
-        ];
+        let v = vec![Complex::new(1, 1), Complex::new(2, -1), Complex::new(-3, 0)];
         let s: Complex<i32> = v.into_iter().sum();
         assert_eq!(s.re, 0);
         assert_eq!(s.im, 0);

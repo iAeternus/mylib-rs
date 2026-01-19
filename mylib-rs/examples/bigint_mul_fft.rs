@@ -39,7 +39,7 @@ fn fft(a: &mut [Complex<f64>], invert: bool) {
 
     let ang = 2.0 * PI / n as f64 * if invert { -1.0 } else { 1.0 };
     let wn = Complex::new(ang.cos(), ang.sin());
-    let mut w = Complex::one();
+    let mut w: Complex<f64> = Complex::one();
 
     for i in 0..n / 2 {
         let u = even[i];

@@ -37,7 +37,7 @@ pub struct BigInteger {
     pub(crate) sign: Sign,
 
     /// 数值块（base = 10^8，小端序）
-    pub(crate) digits: Vec<u32>,
+    pub digits: Vec<u32>,
 }
 
 impl BigInteger {
@@ -89,16 +89,6 @@ impl BigInteger {
         Self {
             sign: Sign::Positive,
             digits: vec![2],
-        }
-    }
-
-    fn normalize(&mut self) {
-        while self.digits.len() > 1 && *self.digits.last().unwrap() == 0 {
-            self.digits.pop();
-        }
-
-        if self.is_zero() {
-            self.sign = Sign::Positive;
         }
     }
 
@@ -158,12 +148,7 @@ impl BigInteger {
             }
         }
 
-        let mut out = Self {
-            sign: Sign::Positive,
-            digits: res,
-        };
-        out.normalize();
-        out
+        Self::from_digits(Sign::Positive, res)
     }
 
     pub fn div_rem(&self, rhs: &Self) -> NumResult<(Self, Self)> {
@@ -213,13 +198,7 @@ impl BigInteger {
         }
 
         quotient.reverse();
-        let sign = if self.sign == rhs.sign {
-            Sign::Positive
-        } else {
-            Sign::Negative
-        };
-        let mut q = Self::from_digits(sign, quotient);
-        q.normalize();
+        let q = Self::from_digits(self.sign ^ rhs.sign, quotient);
 
         let mut r = current;
         r.sign = self.sign;
@@ -228,8 +207,8 @@ impl BigInteger {
     }
 
     #[inline]
-    fn mul_u32(&self, x: u32) -> Self {
-        // self * x     (x < BASE)
+    pub(crate) fn mul_u32(&self, x: u32) -> Self {
+        // self * x (x < BASE)
         if x == 0 || self.is_zero() {
             return Self::zero();
         }
@@ -273,7 +252,7 @@ impl BigInteger {
         }
     }
 
-    fn from_digits(sign: Sign, mut digits: Vec<u32>) -> Self {
+    pub(crate) fn from_digits(sign: Sign, mut digits: Vec<u32>) -> Self {
         // 去除高位前导 0
         while digits.len() > 1 && *digits.last().unwrap() == 0 {
             digits.pop();
@@ -428,9 +407,7 @@ impl FromStr for BigInteger {
             i = start;
         }
 
-        let mut res = Self { sign, digits };
-        res.normalize();
-        Ok(res)
+        Ok(Self::from_digits(sign, digits))
     }
 }
 
@@ -509,7 +486,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "乘法还未实现"]
     fn test_lcm() {
         let a = BigInteger::from(56i32);
         let b = BigInteger::from(98i32);
@@ -523,7 +499,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "乘法还未实现"]
     fn test_pow() {
         let a = BigInteger::from(2i32);
         let result = a.pow(10);
@@ -535,7 +510,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "乘法还未实现"]
     fn test_mod_pow() {
         let a = BigInteger::from(2i32);
         let exp = BigInteger::from(10i32);

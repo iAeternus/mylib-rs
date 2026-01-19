@@ -263,9 +263,6 @@ dependencies = [
 [[package]]
 name = "num"
 version = "0.1.0"
-dependencies = [
- "smallvec",
-]
 
 [[package]]
 name = "num-traits"
