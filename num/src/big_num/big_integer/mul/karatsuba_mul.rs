@@ -83,7 +83,10 @@ impl BigIntMul for KaratsubaMul {
 mod tests {
     use std::str::FromStr;
 
-    use crate::big_num::big_integer::{big_integer::Sign, mul::common::{MUL_RESULT_PATH, assert_res}};
+    use crate::big_num::big_integer::{
+        big_integer::Sign,
+        mul::common::{MUL_RESULT_PATH, assert_res},
+    };
 
     use super::*;
 

@@ -62,7 +62,7 @@ impl<T: Integer> Frac<T> {
             self.denom = T::one();
             return;
         }
-        
+
         if self.denom.is_negative() {
             self.numer = -self.numer;
             self.denom = -self.denom;

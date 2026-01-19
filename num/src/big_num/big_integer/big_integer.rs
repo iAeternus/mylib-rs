@@ -5,6 +5,7 @@ use crate::{
     error::{NumError, NumResult},
 };
 
+/// 符号
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Sign {
     Positive,
@@ -46,6 +47,17 @@ impl BigInteger {
 
     /// 单个数字块表示的十进制位数（`BASE = 10^WIDTH`）
     pub const WIDTH: usize = 8;
+
+    /// 获取数字位数
+    pub fn size(&self) -> usize {
+        let mut size = (self.digits.len() - 1) * Self::WIDTH;
+        let mut high_chunk = *self.digits.last().unwrap();
+        while high_chunk > 0 {
+            size += 1;
+            high_chunk /= 10;
+        }
+        size
+    }
 
     pub fn abs(&self) -> Self {
         let mut x = self.clone();
@@ -453,6 +465,12 @@ impl Display for BigInteger {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_size() {
+        let num = BigInteger::from(1234567890);
+        assert_eq!(num.size(), 10);
+    }
 
     #[test]
     fn test_from_i32() {

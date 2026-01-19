@@ -2,6 +2,8 @@ pub mod core;
 pub use crate::core::*;
 
 #[cfg(not(feature = "core"))]
+pub mod big_num;
+#[cfg(not(feature = "core"))]
 pub mod complex;
 #[cfg(not(feature = "core"))]
 pub mod error;
@@ -11,5 +13,3 @@ pub mod frac;
 pub mod impls;
 #[cfg(not(feature = "core"))]
 pub mod vector;
-#[cfg(not(feature = "core"))]
-pub mod big_num;

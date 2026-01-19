@@ -191,7 +191,11 @@ impl<'a, 'b> Mul<&'b BigInteger> for &'a BigInteger {
         } else if n <= FFTMul::limit() {
             FFTMul::mul(self, rhs)
         } else {
-            panic!("Too large!")
+            panic!(
+                "Number too large! lhs size: {}, rhs size: {}",
+                self.size(),
+                rhs.size()
+            )
         }
     }
 }

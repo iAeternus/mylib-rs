@@ -35,6 +35,7 @@ impl<T: Number> Sub for Complex<T> {
 impl<T: Number> Mul for Complex<T> {
     type Output = Self;
 
+    /// 复数乘复数
     fn mul(self, rhs: Self) -> Self::Output {
         Self::new(
             self.re * rhs.re - self.im * rhs.im,
@@ -46,18 +47,27 @@ impl<T: Number> Mul for Complex<T> {
 impl<T: Number> Mul<T> for Complex<T> {
     type Output = Self;
 
+    /// 复数乘标量
     fn mul(self, rhs: T) -> Self::Output {
         Self::new(self.re * rhs, self.im * rhs)
     }
 }
 
-// impl<T: Number> Mul<Complex<T>> for T {
-//     type Output = Complex<T>;
+// macro_rules! impl_mul {
+//     ($($t:ty),+ $(,)?) => {
+//         $(
+//             impl<T: Number> Mul<Complex<T>> for $t {
+//                 type Output = Complex<$t>;
 
-//     fn mul(self, rhs: Complex<T>) -> Self::Output {
-//         Complex::new(self * rhs.re, self * rhs.im)
-//     }
+//                 fn mul(self, rhs: Complex<T>) -> Self::Output {
+//                     Complex::new(self * rhs.re, self * rhs.im)
+//                 }
+//             }
+//         )+
+//     };
 // }
+
+// impl_mul!(i8, i16, i32, i64, i128);
 
 impl<T: Number> Div for Complex<T> {
     type Output = Self;
@@ -88,6 +98,7 @@ impl<T: Number> SubAssign for Complex<T> {
 }
 
 impl<T: Number> MulAssign for Complex<T> {
+    /// 复数乘复数
     fn mul_assign(&mut self, rhs: Self) {
         let re = self.re * rhs.re - self.im * rhs.im;
         let im = self.re * rhs.im + self.im * rhs.re;
@@ -97,6 +108,7 @@ impl<T: Number> MulAssign for Complex<T> {
 }
 
 impl<T: Number> MulAssign<T> for Complex<T> {
+    /// 复数乘标量
     fn mul_assign(&mut self, rhs: T) {
         self.re *= rhs;
         self.im *= rhs;
@@ -191,7 +203,7 @@ mod tests {
     fn one_is_multiplicative_identity() {
         let z = Complex::new(-2, 5);
         assert_eq!(z * Complex::one(), z);
-        assert_eq!(Complex::one() as Complex<i32> * z, z); // TODO: 很奇怪
+        assert_eq!(Complex::one() as Complex<i32> * z, z);
     }
 
     #[test]

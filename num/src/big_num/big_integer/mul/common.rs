@@ -1,7 +1,8 @@
 use std::{fs, path::PathBuf};
 
 // pub const MUL_RESULT_PATH: &str = "../../../../tests/data/12345678-rep-2048-mul-result.txt";
-pub(crate) const MUL_RESULT_PATH: &str = "F:/Develop/rust/mylib-rs/num/tests/data/12345678-rep-2048-mul-result.txt";
+pub(crate) const MUL_RESULT_PATH: &str =
+    "F:/Develop/rust/mylib-rs/num/tests/data/12345678-rep-2048-mul-result.txt";
 
 pub(crate) fn assert_res(actual: &str, expect_result_path: &str) {
     let expect = read_expected_result(expect_result_path);
