@@ -184,7 +184,7 @@ impl BigIntMul for FFTMul {
 
     #[inline]
     fn limit() -> usize {
-        1048576 // 超大数字块阈值
+        1048576
     }
 }
 

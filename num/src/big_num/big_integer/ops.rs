@@ -189,8 +189,6 @@ impl Mul<&BigInteger> for &BigInteger {
         let n = self.digits.len().max(rhs.digits.len());
         if n <= NaiveMul::limit() {
             NaiveMul::mul(self, rhs)
-        } else if n <= KaratsubaMul::limit() {
-            KaratsubaMul::mul(self, rhs)
         } else if n <= FFTMul::limit() {
             FFTMul::mul(self, rhs)
         } else {

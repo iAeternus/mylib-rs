@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::usize;
 
 use crate::{
@@ -8,6 +10,9 @@ use crate::{
     },
 };
 
+/// 为了实验和基准测试的目的实现了 Karatsuba 乘法，
+/// 但由于与 Rust 中的 FFT 相比，其常量因子不利，所以在默认的乘法路径中未启用。
+/// 测试结果：`num\benches\plots\高精度乘法基准测试数据.png`
 pub struct KaratsubaMul;
 
 impl KaratsubaMul {

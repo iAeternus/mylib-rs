@@ -39,7 +39,7 @@ impl BigIntMul for NaiveMul {
 
     #[inline]
     fn limit() -> usize {
-        64 // 小数字块阈值
+        512
     }
 }
 
