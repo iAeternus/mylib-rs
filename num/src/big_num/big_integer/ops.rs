@@ -10,7 +10,7 @@ use crate::{
     Zero,
     big_num::big_integer::{
         big_integer::{BigInteger, Sign},
-        mul::{BigIntMul, FFTMul, KaratsubaMul, NaiveMul},
+        mul::{BigIntMul, FFTMul, NaiveMul},
     },
     core::one::One,
 };
