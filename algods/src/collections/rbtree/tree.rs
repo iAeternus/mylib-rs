@@ -2,13 +2,13 @@ use std::{marker::PhantomData, ptr::NonNull};
 
 /// 红黑树
 pub struct RBTree<K, V> {
-    root: Link<K, V>,
+    pub(crate) root: Link<K, V>,
     len: usize,
-    nil: Link<K, V>,
+    pub(crate) nil: Link<K, V>,
     _boo: PhantomData<Box<(K, V)>>,
 }
 
-type Link<K, V> = Option<NonNull<Node<K, V>>>;
+pub type Link<K, V> = Option<NonNull<Node<K, V>>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Color {
@@ -18,11 +18,11 @@ enum Color {
 
 #[derive(Debug)]
 pub struct Node<K, V> {
-    key: K,
-    val: V,
-    lch: Link<K, V>,
-    rch: Link<K, V>,
-    parent: Link<K, V>,
+    pub(crate) key: K,
+    pub(crate) val: V,
+    pub(crate) lch: Link<K, V>,
+    pub(crate) rch: Link<K, V>,
+    pub(crate) parent: Link<K, V>,
     color: Color,
 }
 
@@ -47,9 +47,9 @@ impl<K, V> Node<K, V> {
     }
 }
 
-impl<K: Ord, V> RBTree<K, V> {
+impl<K, V> RBTree<K, V> {
     /// 创建红黑树，哨兵键值需要传入
-    pub fn new(nil_key: K, nil_val: V) -> Self {
+    pub(crate) fn new(nil_key: K, nil_val: V) -> Self {
         unsafe {
             let nil = NonNull::new_unchecked(Box::into_raw(Box::new(Node {
                 key: nil_key,
@@ -68,12 +68,35 @@ impl<K: Ord, V> RBTree<K, V> {
         }
     }
 
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.len
     }
 
+    /// 清空整棵树，但保留 nil 哨兵
+    pub(crate) fn clear(&mut self) {
+        unsafe {
+            Self::free_all(self, self.root);
+            self.root = self.nil;
+            self.len = 0;
+        }
+    }
+
+    unsafe fn free_all(tree: &mut RBTree<K, V>, node: Link<K, V>) {
+        if node == tree.nil {
+            return;
+        }
+        let n = node.unwrap().as_ptr();
+        unsafe {
+            Self::free_all(tree, (*n).lch);
+            Self::free_all(tree, (*n).rch);
+            let _ = Box::from_raw(n); // 释放节点
+        }
+    }
+}
+
+impl<K: Ord, V> RBTree<K, V> {
     /// 查找节点
-    pub fn find(&self, key: &K) -> Link<K, V> {
+    pub(crate) fn search_tree(&self, key: &K) -> Link<K, V> {
         unsafe {
             let mut curr = self.root;
 
@@ -94,7 +117,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 最小节点
-    pub fn min(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub(crate) fn min(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             while x != self.nil {
                 let node = x.unwrap().as_ref();
@@ -108,7 +131,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 最大节点
-    pub fn max(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub(crate) fn max(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             while x != self.nil {
                 let node = x.unwrap().as_ref();
@@ -122,7 +145,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 后继节点
-    pub fn successor(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub(crate) fn successor(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             if x == self.nil {
                 return self.nil;
@@ -143,7 +166,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 前驱节点
-    pub fn predecessor(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub(crate) fn predecessor(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             if x == self.nil {
                 return self.nil;
@@ -163,8 +186,8 @@ impl<K: Ord, V> RBTree<K, V> {
         }
     }
 
-    /// 插入
-    pub fn insert(&mut self, key: K, val: V) -> Link<K, V> {
+    /// 插入 TODO: 这里的insert不应该查树
+    pub(crate) fn insert(&mut self, key: K, val: V) -> Link<K, V> {
         unsafe {
             let mut z = Node::new(key, val, Color::Red, self.nil.clone());
             let mut y = self.nil.clone();
@@ -378,7 +401,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 删除节点
-    pub fn remove(&mut self, z: Link<K, V>) -> Link<K, V> {
+    pub(crate) fn remove(&mut self, z: Link<K, V>) -> Link<K, V> {
         if self.len == 0 || z == self.nil {
             return None;
         }
@@ -521,19 +544,7 @@ impl<K: Ord, V> RBTree<K, V> {
 impl<K, V> Drop for RBTree<K, V> {
     fn drop(&mut self) {
         unsafe {
-            unsafe fn free_all<K, V>(tree: &mut RBTree<K, V>, node: Link<K, V>) {
-                if node == tree.nil {
-                    return;
-                }
-                let n = node.unwrap().as_ptr();
-                unsafe {
-                    free_all(tree, (*n).lch);
-                    free_all(tree, (*n).rch);
-                    let _ = Box::from_raw(n); // 释放节点
-                }
-            }
-
-            free_all(self, self.root);
+            Self::free_all(self, self.root);
             let _ = Box::from_raw(self.nil.unwrap().as_ptr()); // 释放 nil
         }
     }
@@ -550,14 +561,14 @@ mod tests {
 
         unsafe {
             for &k in &[5, 10, 15, 20, 25, 30, 35] {
-                let node = tree.find(&k);
+                let node = tree.search_tree(&k);
                 assert!(node.is_some(), "Key {} should exist", k);
                 assert_eq!((*node.unwrap().as_ptr()).key, k);
                 assert_eq!((*node.unwrap().as_ptr()).val, k + 100);
             }
 
-            assert!(tree.find(&0).is_none(), "Key 0 should not exist");
-            assert!(tree.find(&40).is_none(), "Key 40 should not exist");
+            assert!(tree.search_tree(&0).is_none(), "Key 0 should not exist");
+            assert!(tree.search_tree(&40).is_none(), "Key 40 should not exist");
         }
     }
 
@@ -583,11 +594,11 @@ mod tests {
     fn test_successor() {
         let tree = build_test_tree();
         unsafe {
-            let link_10 = tree.find(&10);
+            let link_10 = tree.search_tree(&10);
             let succ_10 = tree.successor(link_10);
             assert_eq!((*succ_10.unwrap().as_ptr()).key, 15);
 
-            let link_35 = tree.find(&35);
+            let link_35 = tree.search_tree(&35);
             let succ_35 = tree.successor(link_35);
             assert_eq!(succ_35, tree.nil, "Successor of max should be nil");
         }
@@ -597,11 +608,11 @@ mod tests {
     fn test_predecessor() {
         let tree = build_test_tree();
         unsafe {
-            let link_25 = tree.find(&25);
+            let link_25 = tree.search_tree(&25);
             let pred_25 = tree.predecessor(link_25);
             assert_eq!((*pred_25.unwrap().as_ptr()).key, 20);
 
-            let link_5 = tree.find(&5);
+            let link_5 = tree.search_tree(&5);
             let pred_5 = tree.predecessor(link_5);
             assert_eq!(pred_5, tree.nil, "Predecessor of min should be nil");
         }
@@ -617,7 +628,7 @@ mod tests {
             let node = tree.insert(key, val);
             assert_eq!(tree.len(), idx + 1);
             unsafe {
-                let found = tree.find(&key);
+                let found = tree.search_tree(&key);
                 assert_eq!(
                     found.unwrap(),
                     node.unwrap(),
@@ -643,13 +654,17 @@ mod tests {
 
         for &key in &remove_keys {
             unsafe {
-                let node = tree.find(&key);
+                let node = tree.search_tree(&key);
                 assert_eq!((*node.unwrap().as_ptr()).key, key);
 
                 let removed = tree.remove(Some(node.unwrap()));
                 assert_eq!((*removed.unwrap().as_ptr()).key, key);
 
-                assert!(tree.find(&key).is_none(), "key {} should be removed", key);
+                assert!(
+                    tree.search_tree(&key).is_none(),
+                    "key {} should be removed",
+                    key
+                );
             }
 
             check_red_black_properties(&tree);

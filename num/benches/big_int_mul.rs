@@ -20,7 +20,9 @@ fn make_bigint(digits: usize) -> BigInteger {
 fn bench_bigint_mul(c: &mut Criterion) {
     let mut group = c.benchmark_group("bigint_mul");
 
-    let sizes = [1usize, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192];
+    let sizes = [
+        1usize, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
+    ];
 
     for &n in &sizes {
         let a = make_bigint(n);
