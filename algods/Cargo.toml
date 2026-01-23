@@ -17,3 +17,7 @@ criterion = "0.8.1"
 [[bench]]
 name = "vec_tree"
 harness = false
+
+[[bench]]
+name = "rbtree_map"
+harness = false

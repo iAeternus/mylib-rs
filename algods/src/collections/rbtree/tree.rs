@@ -49,7 +49,7 @@ impl<K, V> Node<K, V> {
 
 impl<K, V> RBTree<K, V> {
     /// 创建红黑树，哨兵键值需要传入
-    pub(crate) fn new(nil_key: K, nil_val: V) -> Self {
+    pub fn new(nil_key: K, nil_val: V) -> Self {
         unsafe {
             let nil = NonNull::new_unchecked(Box::into_raw(Box::new(Node {
                 key: nil_key,
@@ -68,12 +68,12 @@ impl<K, V> RBTree<K, V> {
         }
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.len
     }
 
     /// 清空整棵树，但保留 nil 哨兵
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         unsafe {
             Self::free_all(self, self.root);
             self.root = self.nil;
@@ -96,7 +96,7 @@ impl<K, V> RBTree<K, V> {
 
 impl<K: Ord, V> RBTree<K, V> {
     /// 查找节点
-    pub(crate) fn search_tree(&self, key: &K) -> Link<K, V> {
+    pub fn search_tree(&self, key: &K) -> Link<K, V> {
         unsafe {
             let mut curr = self.root;
 
@@ -117,7 +117,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 最小节点
-    pub(crate) fn min(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub fn min(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             while x != self.nil {
                 let node = x.unwrap().as_ref();
@@ -131,7 +131,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 最大节点
-    pub(crate) fn max(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub fn max(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             while x != self.nil {
                 let node = x.unwrap().as_ref();
@@ -145,7 +145,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 后继节点
-    pub(crate) fn successor(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub fn successor(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             if x == self.nil {
                 return self.nil;
@@ -166,7 +166,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 前驱节点
-    pub(crate) fn predecessor(&self, mut x: Link<K, V>) -> Link<K, V> {
+    pub fn predecessor(&self, mut x: Link<K, V>) -> Link<K, V> {
         unsafe {
             if x == self.nil {
                 return self.nil;
@@ -187,7 +187,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 插入 TODO: 这里的insert不应该查树
-    pub(crate) fn insert(&mut self, key: K, val: V) -> Link<K, V> {
+    pub fn insert(&mut self, key: K, val: V) -> Link<K, V> {
         unsafe {
             let mut z = Node::new(key, val, Color::Red, self.nil.clone());
             let mut y = self.nil.clone();
@@ -401,7 +401,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 删除节点
-    pub(crate) fn remove(&mut self, z: Link<K, V>) -> Link<K, V> {
+    pub fn remove(&mut self, z: Link<K, V>) -> Link<K, V> {
         if self.len == 0 || z == self.nil {
             return None;
         }
