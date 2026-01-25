@@ -1,5 +1,5 @@
 //! 仿标准库LinkedList实现
-//! 参考: https://course.rs/too-many-lists/production-unsafe-deque/intro.html
+//! 参考: <https://course.rs/too-many-lists/production-unsafe-deque/intro.html>
 
 use std::{
     cmp::Ordering,

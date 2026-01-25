@@ -2,8 +2,7 @@ use criterion::{Criterion, criterion_group, criterion_main};
 
 use std::{collections::BTreeMap, hint::black_box};
 
-use algods::collections::rbtree::map::RBTreeMap;
-// ↑ 改成你真实的 crate 路径
+use algods::collections::RBTreeMap;
 
 const N: usize = 10_000;
 

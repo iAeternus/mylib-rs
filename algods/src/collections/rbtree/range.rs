@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn find_ge_basic() {
-        let mut t = new_tree();
+        let mut t = new_i32_i32_tree();
         insert_seq(&mut t, &[10, 20, 30, 40]);
 
         unsafe {
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn find_gt_basic() {
-        let mut t = new_tree();
+        let mut t = new_i32_i32_tree();
         insert_seq(&mut t, &[10, 20, 30, 40]);
 
         unsafe {
@@ -211,14 +211,14 @@ mod tests {
 
     #[test]
     fn find_on_empty_tree() {
-        let t = new_tree();
+        let t = new_i32_i32_tree();
         assert_eq!(t.find_ge(&1), t.nil);
         assert_eq!(t.find_gt(&1), t.nil);
     }
 
     #[test]
     fn find_on_single_node() {
-        let mut t = new_tree();
+        let mut t = new_i32_i32_tree();
         t.insert(10, 10);
 
         unsafe {
@@ -227,7 +227,7 @@ mod tests {
         }
     }
 
-    fn new_tree() -> RBTree<i32, i32> {
+    fn new_i32_i32_tree() -> RBTree<i32, i32> {
         RBTree::new(0, 0)
     }
 

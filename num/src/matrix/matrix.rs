@@ -32,7 +32,7 @@ impl<T: Number> Matrix<T> {
     /// 从行迭代器创建矩阵
     ///
     /// ## Param
-    /// - rows_iter: 行迭代器，每行是一个可迭代的 T 的集合，可以处理 Vec<Vec<T>>、&[&[T]]、Vec<&[T]> 等多种输入
+    /// - rows_iter: 行迭代器，每行是一个可迭代的 T 的集合，可以处理 `Vec<Vec<T>>`、`&[&[T]]`、`Vec<&[T]>` 等多种输入
     pub fn from_rows_iter<I, R>(rows_iter: I) -> NumResult<Self>
     where
         I: IntoIterator<Item = R>,
