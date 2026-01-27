@@ -15,17 +15,11 @@ pub trait GraphView {
         Self: 'a;
 
     /// 返回某节点的出邻居
-    ///
-    /// 时间复杂度: O(deg(v))
     fn neighbors(&self, n: Self::Node) -> Self::Neighbors<'_>;
 
-    /// 节点总数（可选，但强烈推荐）
-    ///
-    /// 时间复杂度: O(1)
+    /// 节点总数
     fn node_count(&self) -> usize;
 
-    /// 是否存在该节点（用于算法防御式检查）
-    ///
-    /// 时间复杂度: O(1)
+    /// 是否存在该节点
     fn contains_node(&self, n: Self::Node) -> bool;
 }

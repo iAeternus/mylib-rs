@@ -21,12 +21,12 @@ pub struct Edge<E, Idx> {
     next: [EdgeIndex<Idx>; 2],
 }
 
-/// 图（侵入式邻接表实现）
+/// 图（侵入式邻接表）
 ///
-/// N: 节点权重类型  
-/// E: 边权重类型  
-/// Ty: Directed / Undirected  
-/// Idx: 索引类型（通常 usize / usize）  
+/// N: 节点权重类型
+/// E: 边权重类型
+/// Ty: Directed / Undirected
+/// Idx: 索引类型
 pub struct Graph<N, E, Ty = Directed, Idx = usize>
 where
     Idx: Copy + PartialEq + From<usize> + Into<usize>,
