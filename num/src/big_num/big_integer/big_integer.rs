@@ -48,6 +48,22 @@ impl BigInteger {
     /// 单个数字块表示的十进制位数（`BASE = 10^WIDTH`）
     pub const WIDTH: usize = 8;
 
+    pub(crate) fn from_digits(sign: Sign, mut digits: Vec<u32>) -> Self {
+        // 去除高位前导 0
+        while digits.len() > 1 && *digits.last().unwrap() == 0 {
+            digits.pop();
+        }
+
+        // 0 永远是正数
+        let sign = if digits.len() == 1 && digits[0] == 0 {
+            Sign::Positive
+        } else {
+            sign
+        };
+
+        Self { sign, digits }
+    }
+
     /// 获取数字位数
     pub fn size(&self) -> usize {
         let mut size = (self.digits.len() - 1) * Self::WIDTH;
@@ -244,6 +260,24 @@ impl BigInteger {
         }
     }
 
+    // TODO: 还未重载运算符
+    #[inline]
+    pub fn div_u32(&self, rhs: u32) -> Self {
+        assert!(rhs > 0);
+
+        let mut res = Vec::with_capacity(self.digits.len());
+        let mut rem: u64 = 0;
+
+        for &d in self.digits.iter().rev() {
+            let cur = rem * Self::BASE as u64 + d as u64;
+            res.push((cur / rhs as u64) as u32);
+            rem = cur % rhs as u64;
+        }
+
+        res.reverse();
+        Self::from_digits(self.sign, res)
+    }
+
     #[inline]
     fn mul_base_add(&self, d: u32) -> Self {
         // self * BASE + d
@@ -262,22 +296,6 @@ impl BigInteger {
             sign: self.sign,
             digits,
         }
-    }
-
-    pub(crate) fn from_digits(sign: Sign, mut digits: Vec<u32>) -> Self {
-        // 去除高位前导 0
-        while digits.len() > 1 && *digits.last().unwrap() == 0 {
-            digits.pop();
-        }
-
-        // 0 永远是正数
-        let sign = if digits.len() == 1 && digits[0] == 0 {
-            Sign::Positive
-        } else {
-            sign
-        };
-
-        Self { sign, digits }
     }
 
     pub fn pow(&self, mut exp: u64) -> Self {
@@ -326,6 +344,90 @@ impl BigInteger {
         }
 
         result
+    }
+
+    /// 乘以 10^k
+    pub fn mul_pow10(&self, k: usize) -> Self {
+        if self.is_zero() {
+            return Self::zero();
+        }
+
+        let block_shift = k / Self::WIDTH;
+        let digit_shift = k % Self::WIDTH;
+
+        // 整块扩展
+        let mut digits = Vec::with_capacity(self.digits.len() + block_shift + 1);
+        digits.extend(std::iter::repeat(0).take(block_shift));
+        digits.extend_from_slice(&self.digits);
+
+        if digit_shift == 0 {
+            return Self::from_digits(self.sign, digits);
+        }
+
+        // 块内乘 10^digit_shift
+        let mul = 10u32.pow(digit_shift as u32) as u64;
+        let mut carry = 0u64;
+
+        for d in digits.iter_mut() {
+            let tmp = *d as u64 * mul + carry;
+            *d = (tmp % Self::BASE as u64) as u32;
+            carry = tmp / Self::BASE as u64;
+        }
+
+        if carry > 0 {
+            digits.push(carry as u32);
+        }
+
+        Self::from_digits(self.sign, digits)
+    }
+
+    /// 除以 10^k，返回 (商, 余数)
+    pub fn div_rem_pow10(&self, k: usize) -> (Self, Self) {
+        if self.is_zero() {
+            return (Self::zero(), Self::zero());
+        }
+
+        let block_shift = k / Self::WIDTH;
+        let digit_shift = k % Self::WIDTH;
+
+        if block_shift >= self.digits.len() {
+            return (Self::zero(), self.clone());
+        }
+
+        let mut q_digits = self.digits[block_shift..].to_vec();
+        let mut rem_high = 0u64;
+
+        if digit_shift != 0 {
+            let div = 10u32.pow(digit_shift as u32) as u64;
+
+            for d in q_digits.iter_mut().rev() {
+                let cur = rem_high * Self::BASE as u64 + *d as u64;
+                *d = (cur / div) as u32;
+                rem_high = cur % div;
+            }
+        }
+
+        let q = Self::from_digits(self.sign, q_digits);
+
+        let mut r_digits = self.digits[..block_shift].to_vec();
+        if digit_shift != 0 {
+            let mul = 10u32.pow(digit_shift as u32) as u64;
+            let mut carry = rem_high;
+
+            for d in r_digits.iter_mut() {
+                let tmp = *d as u64 * mul + carry;
+                *d = (tmp % Self::BASE as u64) as u32;
+                carry = tmp / Self::BASE as u64;
+            }
+
+            if carry > 0 {
+                r_digits.push(carry as u32);
+            }
+        }
+
+        let r = Self::from_digits(self.sign, r_digits);
+
+        (q, r)
     }
 }
 
@@ -609,5 +711,17 @@ mod tests {
     fn test_parse_invalid() {
         let invalid = BigInteger::from_str("abc");
         assert!(invalid.is_err());
+    }
+
+    #[test]
+    fn test_pow10_ops() {
+        let n = BigInteger::from_str("12345678901234567890").unwrap();
+
+        let (q, r) = n.div_rem_pow10(3);
+        assert_eq!(q.to_string(), "12345678901234567");
+        assert_eq!(r.to_string(), "890");
+
+        let m = BigInteger::from(1234);
+        assert_eq!(m.mul_pow10(5).to_string(), "123400000");
     }
 }

@@ -1,4 +1,6 @@
 //! 并查集
+//!
+//! 用于维护若干不相交集合，支持集合的合并与连通性查询
 
 use std::collections::HashSet;
 
@@ -11,6 +13,9 @@ pub struct DisjointSet {
 
 impl DisjointSet {
     /// 创建一个新的并查集，初始化大小为`n`
+    ///
+    /// ## Notes
+    /// 时间复杂度: O(n)
     pub fn new(n: usize) -> Self {
         let parent = (0..n).collect::<Vec<usize>>();
         let rank = vec![0; n];
@@ -22,6 +27,7 @@ impl DisjointSet {
     ///
     /// ## Notes
     /// - 在查找时应用路径压缩
+    /// - 时间复杂度: 均摊 O(α(n))
     pub fn find(&mut self, x: usize) -> usize {
         let mut node = x;
         while self.parent[node] != node {
@@ -32,6 +38,9 @@ impl DisjointSet {
     }
 
     /// 合并两个元素所在的集合
+    ///
+    /// ## Notes
+    /// 时间复杂度: 均摊 O(α(n))
     pub fn union(&mut self, x: usize, y: usize) {
         let root_x = self.find(x);
         let root_y = self.find(y);
@@ -54,17 +63,26 @@ impl DisjointSet {
     }
 
     /// 判断两个元素是否在同一个集合中
+    ///
+    /// ## Notes
+    /// 时间复杂度: 均摊 O(α(n))
     pub fn is_connected(&mut self, x: usize, y: usize) -> bool {
         self.find(x) == self.find(y)
     }
 
     /// 返回指定元素`x`所在集合的大小
+    ///
+    /// ## Notes
+    /// 时间复杂度: 均摊 O(α(n))
     pub fn size(&mut self, x: usize) -> usize {
         let root_x = self.find(x);
         self.size[root_x]
     }
 
     /// 返回并查集中总共有多少个集合
+    ///
+    /// ## Notes
+    /// 时间复杂度: O(n α(n))
     pub fn sets_count(&mut self) -> usize {
         let mut roots = HashSet::new();
         for i in 0..self.parent.len() {

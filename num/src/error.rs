@@ -34,6 +34,9 @@ pub enum NumError {
 
     /// 高精度整数转换错误
     ParseBigIntError,
+
+    /// 高精度浮点数转换错误
+    ParseBigDecError,
 }
 
 pub type NumResult<T> = core::result::Result<T, NumError>;
@@ -76,6 +79,7 @@ impl fmt::Display for NumError {
                 write!(f, "matrix is not square ({}x{})", rows, cols)
             }
             NumError::ParseBigIntError => write!(f, "parse big int error"),
+            NumError::ParseBigDecError => write!(f, "parse big decimal error"),
         }
     }
 }
