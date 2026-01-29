@@ -7,5 +7,5 @@ repository = "https://github.com/iAeternus/mylib-rs.git"
 homepage = "https://github.com/iAeternus"
 
 [workspace]
-members = ["algods","mylib-rs","num"]
+members = ["algods", "macros", "mylib-rs", "num"]
 resolver = "3"

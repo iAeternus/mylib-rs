@@ -19,6 +19,7 @@
         "smallvec",
         "submatrix",
         "succ",
+        "trybuild",
         "Tukey",
         "vecs",
         "Ziwei"

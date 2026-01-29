@@ -1,0 +1,5 @@
+error: Builder can only be derived for structs
+ --> tests/builder/builder_fail.rs:4:6
+  |
+4 | enum Foo {
+  |      ^^^
