@@ -21,3 +21,7 @@ harness = false
 [[bench]]
 name = "rbtree_map"
 harness = false
+
+[[bench]]
+name = "fibonacci_heap"
+harness = false

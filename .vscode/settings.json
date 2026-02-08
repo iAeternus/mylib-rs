@@ -11,6 +11,7 @@
         "IFFT",
         "impls",
         "Karatsuba",
+        "logn",
         "mylib",
         "numer",
         "rbtree",
