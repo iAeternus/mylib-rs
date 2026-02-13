@@ -1,6 +1,10 @@
 //! 图算法模块
 
-use std::collections::{HashSet, VecDeque};
+use std::{
+    cmp::Reverse,
+    collections::{BinaryHeap, HashMap, HashSet, VecDeque},
+    ops::Add,
+};
 
 use crate::graph::GraphView;
 
@@ -13,7 +17,7 @@ pub fn dfs<G: GraphView>(g: &G, start: G::Node) -> Vec<G::Node> {
     ) {
         vis.insert(u);
         out.push(u);
-        for v in g.neighbors(u) {
+        for (v, _) in g.neighbors(u) {
             if !vis.contains(&v) {
                 dfs_inner(g, v, vis, out);
             }
@@ -36,13 +40,53 @@ pub fn bfs<G: GraphView>(g: &G, start: G::Node) -> Vec<G::Node> {
 
     while let Some(u) = q.pop_front() {
         out.push(u);
-        for v in g.neighbors(u) {
+        for (v, _) in g.neighbors(u) {
             if !vis.contains(&v) {
                 q.push_back(v);
             }
         }
     }
     out
+}
+
+pub fn dijkstra<G>(g: &G, from: G::Node, to: G::Node) -> Option<G::EdgeWeight>
+where
+    G: GraphView,
+    G::EdgeWeight: From<u8> + Add<Output = G::EdgeWeight> + Ord + Copy,
+{
+    let mut dis: HashMap<G::Node, G::EdgeWeight> = HashMap::new();
+    let mut heap = BinaryHeap::new();
+
+    let zero = 0u8.into();
+    dis.insert(from, zero);
+    heap.push((Reverse(zero), from));
+
+    while let Some((Reverse(d), u)) = heap.pop() {
+        if let Some(&best) = dis.get(&u) {
+            if d > best {
+                continue;
+            }
+        }
+
+        if u == to {
+            return Some(d);
+        }
+
+        for (v, w) in g.neighbors(u) {
+            let nd = w + d;
+            let relax = match dis.get(&v) {
+                Some(&old) => nd < old,
+                None => true,
+            };
+
+            if relax {
+                dis.insert(v, nd);
+                heap.push((Reverse(nd), v));
+            }
+        }
+    }
+
+    None // 不可达
 }
 
 #[cfg(test)]
@@ -52,25 +96,45 @@ mod tests {
 
     #[test]
     fn test_dfs() {
-        let g = TestGraph::new(&[(0, &[1, 2]), (1, &[3]), (2, &[]), (3, &[])]);
+        let g = TestGraph::new(&[(0, &[(1, 1), (2, 1)]), (1, &[(3, 1)]), (2, &[]), (3, &[])]);
         let res = dfs(&g, 0);
         assert_eq!(res, vec![0, 1, 3, 2]);
     }
 
     #[test]
     fn test_bfs() {
-        let g = TestGraph::new(&[(0, &[1, 2]), (1, &[3]), (2, &[]), (3, &[])]);
+        let g = TestGraph::new(&[(0, &[(1, 1), (2, 1)]), (1, &[(3, 1)]), (2, &[]), (3, &[])]);
         let res = bfs(&g, 0);
         assert_eq!(res, vec![0, 1, 2, 3]);
     }
 
-    /// 测试用图：邻接表
+    #[test]
+    fn test_dijkstra() {
+        // 图结构：
+        // 0 -> 1 (2)
+        // 0 -> 2 (5)
+        // 1 -> 2 (1)
+        // 1 -> 3 (3)
+        // 2 -> 3 (1)
+        //
+        // 最短路：0 -> 1 -> 2 -> 3 = 2 + 1 + 1 = 4
+        let g = TestGraph::new(&[
+            (0, &[(1, 2), (2, 5)]),
+            (1, &[(2, 1), (3, 3)]),
+            (2, &[(3, 1)]),
+            (3, &[]),
+        ]);
+
+        let dist = dijkstra(&g, 0, 3);
+        assert_eq!(dist, Some(4));
+    }
+
     struct TestGraph {
-        adj: HashMap<usize, Vec<usize>>,
+        adj: HashMap<usize, Vec<(usize, usize)>>, // (to, weight)
     }
 
     impl TestGraph {
-        fn new(edges: &[(usize, &[usize])]) -> Self {
+        fn new(edges: &[(usize, &[(usize, usize)])]) -> Self {
             let mut adj = HashMap::new();
             for (u, vs) in edges {
                 adj.insert(*u, vs.to_vec());
@@ -81,8 +145,12 @@ mod tests {
 
     impl GraphView for TestGraph {
         type Node = usize;
+        type EdgeWeight = usize;
 
-        type Neighbors<'a> = std::iter::Copied<std::slice::Iter<'a, usize>>;
+        type Neighbors<'a>
+            = std::iter::Copied<std::slice::Iter<'a, (usize, usize)>>
+        where
+            Self: 'a;
 
         fn neighbors(&self, n: usize) -> Self::Neighbors<'_> {
             self.adj

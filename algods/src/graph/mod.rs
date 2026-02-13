@@ -7,10 +7,12 @@ pub mod graph;
 
 pub trait GraphView {
     /// 节点句柄类型
-    type Node: Copy + Eq + Hash;
+    type Node: Copy + Eq + Hash + Ord;
+    /// 边权类型
+    type EdgeWeight: Copy + Ord + std::ops::Add<Output = Self::EdgeWeight>;
 
-    /// 邻居迭代器
-    type Neighbors<'a>: Iterator<Item = Self::Node>
+    /// 邻居迭代器 (neighbor, weight)
+    type Neighbors<'a>: Iterator<Item = (Self::Node, Self::EdgeWeight)>
     where
         Self: 'a;
 

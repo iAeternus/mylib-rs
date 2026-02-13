@@ -207,28 +207,27 @@ where
 impl<N, E, Ty, Idx> GraphView for Graph<N, E, Ty, Idx>
 where
     Ty: EdgeType,
-    Idx: Copy + Eq + Hash + From<usize> + Into<usize>,
+    Idx: Copy + Eq + Hash + From<usize> + Into<usize> + Ord,
+    E: Copy + Ord + std::ops::Add<Output = E>,
 {
     type Node = NodeIndex<Idx>;
+    type EdgeWeight = E;
 
     type Neighbors<'a>
         = Neighbors<'a, N, E, Ty, Idx>
     where
         Self: 'a;
 
-    #[inline]
     fn neighbors(&self, n: Self::Node) -> Self::Neighbors<'_> {
         Neighbors {
             inner: self.edges_directed(n, Direction::Outgoing),
         }
     }
 
-    #[inline]
     fn node_count(&self) -> usize {
         self.nodes.len()
     }
 
-    #[inline]
     fn contains_node(&self, n: Self::Node) -> bool {
         n.0.into() < self.nodes.len()
     }
@@ -268,11 +267,12 @@ impl<'a, N, E, Ty, Idx> Iterator for Neighbors<'a, N, E, Ty, Idx>
 where
     Ty: EdgeType,
     Idx: Copy + PartialEq + From<usize> + Into<usize>,
+    E: Copy,
 {
-    type Item = NodeIndex<Idx>;
+    type Item = (NodeIndex<Idx>, E);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|edge| edge.node[1])
+        self.inner.next().map(|edge| (edge.node[1], *edge.weight))
     }
 }
 
