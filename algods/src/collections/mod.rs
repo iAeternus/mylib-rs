@@ -5,6 +5,7 @@ pub mod linked_list;
 pub mod rbtree;
 pub mod segment_tree;
 pub mod trie;
+pub mod bit_set;
 
 pub use linked_list::LinkedList;
 pub use rbtree::RBTreeMap;

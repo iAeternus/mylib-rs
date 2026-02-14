@@ -7,6 +7,7 @@
         "denormal",
         "Deque",
         "elementwise",
+        "elems",
         "fenwick",
         "IFFT",
         "impls",
