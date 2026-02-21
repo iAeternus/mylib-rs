@@ -106,7 +106,7 @@ impl<T: Integer> Signed for Frac<T> {
     }
 
     #[inline]
-    fn is_negative(self) -> bool {
+    fn is_negative(&self) -> bool {
         self.numer.is_negative()
     }
 }

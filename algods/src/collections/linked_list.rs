@@ -180,10 +180,6 @@ impl<T> LinkedList<T> {
         }
     }
 
-    pub fn into_iter(self) -> IntoIter<T> {
-        IntoIter { list: self }
-    }
-
     pub fn cursor_mut(&'_ mut self) -> CursorMut<'_, T> {
         CursorMut {
             list: self,
@@ -195,7 +191,7 @@ impl<T> LinkedList<T> {
 
 impl<T> Drop for LinkedList<T> {
     fn drop(&mut self) {
-        while let Some(_) = self.pop_front() {}
+        while self.pop_front().is_some() {}
     }
 }
 
@@ -240,10 +236,6 @@ impl<T: Debug> Debug for LinkedList<T> {
 impl<T: PartialEq> PartialEq for LinkedList<T> {
     fn eq(&self, other: &Self) -> bool {
         self.len() == other.len() && self.iter().eq(other)
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        self.len() != other.len() || self.iter().ne(other)
     }
 }
 
@@ -373,7 +365,7 @@ impl<T> IntoIterator for LinkedList<T> {
     type Item = T;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.into_iter()
+        IntoIter { list: self }
     }
 }
 
@@ -528,7 +520,7 @@ impl<'a, T> CursorMut<'a, T> {
         } else {
             // We're at the ghost, just replace our list with an empty one.
             // No other state needs to be changed.
-            std::mem::replace(self.list, LinkedList::new())
+            std::mem::take(self.list)
         }
     }
 
@@ -590,7 +582,7 @@ impl<'a, T> CursorMut<'a, T> {
         } else {
             // We're at the ghost, just replace our list with an empty one.
             // No other state needs to be changed.
-            std::mem::replace(self.list, LinkedList::new())
+            std::mem::take(self.list)
         }
     }
 
@@ -898,7 +890,7 @@ mod test {
             assert_eq!(6 - i as i32, *elt);
         }
         let mut n = LinkedList::new();
-        assert_eq!(n.iter().rev().next(), None);
+        assert_eq!(n.iter().next_back(), None);
         n.push_front(4);
         let mut it = n.iter().rev();
         assert_eq!(it.size_hint(), (1, Some(1)));
@@ -973,33 +965,24 @@ mod test {
 
     #[test]
     fn test_ord_nan() {
-        let nan = 0.0f64 / 0.0;
+        let nan = f64::NAN;
         let n = list_from(&[nan]);
         let m = list_from(&[nan]);
-        assert!(!(n < m));
-        assert!(!(n > m));
-        assert!(!(n <= m));
-        assert!(!(n >= m));
+        assert_eq!(n.partial_cmp(&m), None);
 
         let n = list_from(&[nan]);
         let one = list_from(&[1.0f64]);
-        assert!(!(n < one));
-        assert!(!(n > one));
-        assert!(!(n <= one));
-        assert!(!(n >= one));
+        assert_eq!(n.partial_cmp(&one), None);
 
         let u = list_from(&[1.0f64, 2.0, nan]);
         let v = list_from(&[1.0f64, 2.0, 3.0]);
-        assert!(!(u < v));
-        assert!(!(u > v));
-        assert!(!(u <= v));
-        assert!(!(u >= v));
+        assert_eq!(u.partial_cmp(&v), None);
 
         let s = list_from(&[1.0f64, 2.0, 4.0, 2.0]);
         let t = list_from(&[1.0f64, 2.0, 3.0, 2.0]);
-        assert!(!(s < t));
+        assert_eq!(s.partial_cmp(&t), Some(Ordering::Greater));
         assert!(s > one);
-        assert!(!(s <= one));
+        assert_eq!(s.partial_cmp(&one), Some(Ordering::Greater));
         assert!(s >= one);
     }
 
@@ -1008,10 +991,7 @@ mod test {
         let list: LinkedList<i32> = (0..10).collect();
         assert_eq!(format!("{:?}", list), "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]");
 
-        let list: LinkedList<&str> = vec!["just", "one", "test", "more"]
-            .iter()
-            .copied()
-            .collect();
+        let list: LinkedList<&str> = ["just", "one", "test", "more"].iter().copied().collect();
         assert_eq!(format!("{:?}", list), r#"["just", "one", "test", "more"]"#);
     }
 

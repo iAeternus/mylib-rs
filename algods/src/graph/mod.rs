@@ -3,6 +3,7 @@
 use std::hash::Hash;
 pub mod algo;
 mod base;
+#[allow(clippy::module_inception)]
 pub mod graph;
 
 pub trait GraphBase {

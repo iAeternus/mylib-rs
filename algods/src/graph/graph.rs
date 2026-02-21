@@ -1,4 +1,4 @@
-use std::{hash::Hash, marker::PhantomData, usize};
+use std::{hash::Hash, marker::PhantomData};
 
 use crate::graph::{
     GraphBase,
@@ -95,7 +95,7 @@ where
             next: [EdgeIndex::end(), EdgeIndex::end()],
         };
         self.nodes.push(node);
-        NodeIndex(Idx::from((self.nodes.len() - 1) as usize))
+        NodeIndex(Idx::from(self.nodes.len() - 1))
     }
 
     /// 添加一条边 a -> b（有向图）
@@ -103,7 +103,7 @@ where
     ///
     /// 时间复杂度: O(1)
     pub fn add_edge(&mut self, a: NodeIndex<Idx>, b: NodeIndex<Idx>, weight: E) -> EdgeIndex<Idx> {
-        let edge_idx = EdgeIndex(Idx::from(self.edges.len() as usize));
+        let edge_idx = EdgeIndex(Idx::from(self.edges.len()));
 
         let edge = Edge {
             weight: weight.clone(),
@@ -129,7 +129,7 @@ where
 
         // 若是无向图，补一条反向边
         if !Ty::DIRECTED {
-            let rev_idx = EdgeIndex(Idx::from(self.edges.len() as usize));
+            let rev_idx = EdgeIndex(Idx::from(self.edges.len()));
 
             let rev_edge = Edge {
                 weight,
@@ -169,6 +169,17 @@ where
         let next_edge = node.next[node_dir];
         node.next[node_dir] = edge_idx;
         self.edges[edge_idx.0.into()].next[edge_dir] = next_edge;
+    }
+}
+
+impl<N, E, Ty, Idx> Default for Graph<N, E, Ty, Idx>
+where
+    Ty: EdgeType,
+    Idx: Copy + PartialEq + From<usize> + Into<usize>,
+    E: Clone,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 

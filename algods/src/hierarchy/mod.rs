@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 pub mod hierarchy;
 pub mod tree;
 pub mod vec_tree;

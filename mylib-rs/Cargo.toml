@@ -11,3 +11,7 @@ homepage.workspace = true
 [dependencies]
 num = { path = "../num", version = "*" }
 algods = { path = "../algods", version = "*" }
+
+[features]
+default = []
+core = ["num/core"]

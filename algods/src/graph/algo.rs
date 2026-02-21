@@ -61,10 +61,10 @@ where
     heap.push((Reverse(zero), from));
 
     while let Some((Reverse(d), u)) = heap.pop() {
-        if let Some(&best) = dis.get(&u) {
-            if d > best {
-                continue;
-            }
+        if let Some(&best) = dis.get(&u)
+            && d > best
+        {
+            continue;
         }
 
         if u == to {

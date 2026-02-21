@@ -6,5 +6,5 @@ pub trait Signed: Neg<Output = Self> {
     fn abs(self) -> Self;
 
     /// 是否为负
-    fn is_negative(self) -> bool;
+    fn is_negative(&self) -> bool;
 }

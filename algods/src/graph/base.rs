@@ -19,6 +19,7 @@ pub trait EdgeType {
 }
 
 pub struct Directed;
+#[allow(dead_code)]
 pub struct Undirected;
 
 impl EdgeType for Directed {

@@ -62,8 +62,8 @@ macro_rules! impl_signed_integer {
                 }
 
                 #[inline]
-                fn is_negative(self) -> bool {
-                    self < 0
+                fn is_negative(&self) -> bool {
+                    *self < 0
                 }
             }
 
@@ -104,8 +104,8 @@ macro_rules! impl_float {
         $(
             impl Signed for $t {
                 #[inline]
-                fn is_negative(self) -> bool {
-                    self < 0.0
+                fn is_negative(&self) -> bool {
+                    *self < 0.0
                 }
 
                 #[inline]

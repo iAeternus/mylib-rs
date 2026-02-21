@@ -75,10 +75,7 @@ impl<'a, K: Ord, V> OccupiedEntry<'a, K, V> {
     }
 
     pub fn insert(&mut self, val: V) -> V {
-        unsafe {
-            let old = std::mem::replace(&mut (*self.node.unwrap().as_ptr()).val, val);
-            old
-        }
+        unsafe { std::mem::replace(&mut (*self.node.unwrap().as_ptr()).val, val) }
     }
 
     pub fn into_mut(self) -> &'a mut V {

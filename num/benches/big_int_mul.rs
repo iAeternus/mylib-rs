@@ -1,14 +1,19 @@
+#![cfg_attr(feature = "core", allow(dead_code, unused_imports))]
+
+#[cfg(not(feature = "core"))]
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+#[cfg(not(feature = "core"))]
 use num::big_num::big_integer::big_integer::{BigInteger, Sign};
+#[cfg(not(feature = "core"))]
 use std::hint::black_box;
 
-/// 构造指定 digits 数量的 BigInteger
+#[cfg(not(feature = "core"))]
 fn make_bigint(digits: usize) -> BigInteger {
     assert!(digits > 0);
 
     let mut v = Vec::with_capacity(digits);
     for i in 0..digits {
-        v.push(((i as u32 + 1) * 12_345_679) % BigInteger::BASE);
+        v.push((i as u32 + 1).wrapping_mul(12_345_679) % BigInteger::BASE);
     }
 
     BigInteger {
@@ -17,6 +22,7 @@ fn make_bigint(digits: usize) -> BigInteger {
     }
 }
 
+#[cfg(not(feature = "core"))]
 fn bench_bigint_mul(c: &mut Criterion) {
     let mut group = c.benchmark_group("bigint_mul");
 
@@ -42,6 +48,7 @@ fn bench_bigint_mul(c: &mut Criterion) {
     group.finish();
 }
 
+#[cfg(not(feature = "core"))]
 criterion_group!(
     name = bigint;
     config = Criterion::default()
@@ -51,4 +58,8 @@ criterion_group!(
     targets = bench_bigint_mul
 );
 
+#[cfg(not(feature = "core"))]
 criterion_main!(bigint);
+
+#[cfg(feature = "core")]
+fn main() {}

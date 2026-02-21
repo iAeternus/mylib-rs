@@ -94,6 +94,10 @@ impl<K, V> RBTree<K, V> {
         self.len
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
     /// 清空整棵树，但保留 nil 哨兵
     pub fn clear(&mut self) {
         unsafe {
@@ -438,7 +442,7 @@ impl<K: Ord, V> RBTree<K, V> {
         }
 
         unsafe {
-            let mut y = z.clone();
+            let mut y = z;
             let mut y_original_color = (*y.ptr()).color;
 
             let x; // y的原始位置
