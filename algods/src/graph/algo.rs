@@ -43,6 +43,7 @@ pub fn bfs<G: GraphView>(g: &G, start: G::Node) -> Vec<G::Node> {
         for (v, _) in g.neighbors(u) {
             if !vis.contains(&v) {
                 q.push_back(v);
+                vis.insert(v);
             }
         }
     }
@@ -106,6 +107,28 @@ mod tests {
         let g = TestGraph::new(&[(0, &[(1, 1), (2, 1)]), (1, &[(3, 1)]), (2, &[]), (3, &[])]);
         let res = bfs(&g, 0);
         assert_eq!(res, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn test_bfs_cycle_no_duplicate_visit() {
+        // 0 -> 1,2
+        // 1 -> 2,3
+        // 2 -> 1,3
+        // 3 -> 0
+        // 图中既有环，也有对同一节点(3)的多入边
+        let g = TestGraph::new(&[
+            (0, &[(1, 1), (2, 1)]),
+            (1, &[(2, 1), (3, 1)]),
+            (2, &[(1, 1), (3, 1)]),
+            (3, &[(0, 1)]),
+        ]);
+
+        let res = bfs(&g, 0);
+        assert_eq!(res, vec![0, 1, 2, 3]);
+
+        // 验证不会重复访问
+        let unique: std::collections::HashSet<_> = res.iter().copied().collect();
+        assert_eq!(unique.len(), res.len());
     }
 
     #[test]
