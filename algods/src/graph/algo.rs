@@ -1,15 +1,13 @@
 //! 图算法模块
-
 use std::{
     cmp::Reverse,
     collections::{BinaryHeap, HashMap, HashSet, VecDeque},
-    ops::Add,
 };
 
-use crate::graph::GraphView;
+use crate::graph::GraphBase;
 
-pub fn dfs<G: GraphView>(g: &G, start: G::Node) -> Vec<G::Node> {
-    fn dfs_inner<G: GraphView>(
+pub fn dfs<G: GraphBase>(g: &G, start: G::Node) -> Vec<G::Node> {
+    fn dfs_inner<G: GraphBase>(
         g: &G,
         u: G::Node,
         vis: &mut HashSet<G::Node>,
@@ -30,7 +28,7 @@ pub fn dfs<G: GraphView>(g: &G, start: G::Node) -> Vec<G::Node> {
     out
 }
 
-pub fn bfs<G: GraphView>(g: &G, start: G::Node) -> Vec<G::Node> {
+pub fn bfs<G: GraphBase>(g: &G, start: G::Node) -> Vec<G::Node> {
     let mut vis = HashSet::new();
     let mut q = VecDeque::new();
     let mut out = Vec::new();
@@ -52,8 +50,8 @@ pub fn bfs<G: GraphView>(g: &G, start: G::Node) -> Vec<G::Node> {
 
 pub fn dijkstra<G>(g: &G, from: G::Node, to: G::Node) -> Option<G::EdgeWeight>
 where
-    G: GraphView,
-    G::EdgeWeight: From<u8> + Add<Output = G::EdgeWeight> + Ord + Copy,
+    G: GraphBase,
+    G::EdgeWeight: From<u8>,
 {
     let mut dis: HashMap<G::Node, G::EdgeWeight> = HashMap::new();
     let mut heap = BinaryHeap::new();
@@ -166,7 +164,7 @@ mod tests {
         }
     }
 
-    impl GraphView for TestGraph {
+    impl GraphBase for TestGraph {
         type Node = usize;
         type EdgeWeight = usize;
 

@@ -1,7 +1,7 @@
 use std::{hash::Hash, marker::PhantomData, usize};
 
 use crate::graph::{
-    GraphView,
+    GraphBase,
     base::{Directed, Direction, EdgeIndex, EdgeType, NodeIndex},
 };
 
@@ -204,7 +204,7 @@ where
     }
 }
 
-impl<N, E, Ty, Idx> GraphView for Graph<N, E, Ty, Idx>
+impl<N, E, Ty, Idx> GraphBase for Graph<N, E, Ty, Idx>
 where
     Ty: EdgeType,
     Idx: Copy + Eq + Hash + From<usize> + Into<usize> + Ord,

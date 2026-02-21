@@ -5,7 +5,7 @@ pub mod algo;
 mod base;
 pub mod graph;
 
-pub trait GraphView {
+pub trait GraphBase {
     /// 节点句柄类型
     type Node: Copy + Eq + Hash + Ord;
     /// 边权类型
