@@ -8,7 +8,19 @@ pub struct RBTree<K, V> {
     _boo: PhantomData<Box<(K, V)>>,
 }
 
-pub type Link<K, V> = Option<NonNull<Node<K, V>>>;
+pub type Link<K, V> = Option<RawLink<K, V>>;
+type RawLink<K, V> = NonNull<Node<K, V>>;
+
+trait LinkExt<K, V> {
+    fn ptr(self) -> *mut Node<K, V>;
+}
+
+impl<K, V> LinkExt<K, V> for Link<K, V> {
+    #[inline(always)]
+    fn ptr(self) -> *mut Node<K, V> {
+        self.expect("link should never be None here").as_ptr()
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Color {
@@ -85,7 +97,7 @@ impl<K, V> RBTree<K, V> {
         if node == tree.nil {
             return;
         }
-        let n = node.unwrap().as_ptr();
+        let n = node.ptr();
         unsafe {
             Self::free_all(tree, (*n).lch);
             Self::free_all(tree, (*n).rch);
@@ -195,10 +207,10 @@ impl<K: Ord, V> RBTree<K, V> {
 
             while x != self.nil {
                 y = x;
-                if z.key < (*x.unwrap().as_ptr()).key {
-                    x = (*x.unwrap().as_ptr()).lch;
+                if z.key < (*x.ptr()).key {
+                    x = (*x.ptr()).lch;
                 } else {
-                    x = (*x.unwrap().as_ptr()).rch;
+                    x = (*x.ptr()).rch;
                 }
             }
 
@@ -206,10 +218,10 @@ impl<K: Ord, V> RBTree<K, V> {
             let z_link = NonNull::new(Box::into_raw(Box::new(z)));
             if y == self.nil {
                 self.root = z_link;
-            } else if (*z_link.unwrap().as_ptr()).key < (*y.unwrap().as_ptr()).key {
-                (*y.unwrap().as_ptr()).lch = z_link;
+            } else if (*z_link.ptr()).key < (*y.ptr()).key {
+                (*y.ptr()).lch = z_link;
             } else {
-                (*y.unwrap().as_ptr()).rch = z_link;
+                (*y.ptr()).rch = z_link;
             }
 
             self.insert_fixup(z_link);
@@ -227,79 +239,47 @@ impl<K: Ord, V> RBTree<K, V> {
     fn insert_fixup(&mut self, z: Link<K, V>) {
         unsafe {
             let mut z = z;
-            while (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).is_red() {
-                if (*z.unwrap().as_ptr()).parent
-                    == (*(*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr())
-                        .parent
-                        .unwrap()
-                        .as_ptr())
-                    .lch
-                {
-                    let y = (*(*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr())
-                        .parent
-                        .unwrap()
-                        .as_ptr())
-                    .rch; // 叔结点
-                    if (*y.unwrap().as_ptr()).is_red() {
+            while (*(*z.ptr()).parent.ptr()).is_red() {
+                if (*z.ptr()).parent == (*(*(*z.ptr()).parent.ptr()).parent.unwrap().as_ptr()).lch {
+                    let y = (*(*(*z.ptr()).parent.ptr()).parent.unwrap().as_ptr()).rch; // 叔结点
+                    if (*y.ptr()).is_red() {
                         // Case 1: 叔节点为红色
-                        (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Black;
-                        (*y.unwrap().as_ptr()).color = Color::Black;
-                        (*(*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr())
-                            .parent
-                            .unwrap()
-                            .as_ptr())
-                        .color = Color::Red;
-                        z = (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).parent;
+                        (*(*z.ptr()).parent.ptr()).color = Color::Black;
+                        (*y.ptr()).color = Color::Black;
+                        (*(*(*z.ptr()).parent.ptr()).parent.unwrap().as_ptr()).color = Color::Red;
+                        z = (*(*z.ptr()).parent.ptr()).parent;
                     } else {
                         // Case 2/3: 叔节点为黑色
-                        if z == (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).rch {
+                        if z == (*(*z.ptr()).parent.ptr()).rch {
                             // Case 2: z是右孩子
-                            z = (*z.unwrap().as_ptr()).parent;
+                            z = (*z.ptr()).parent;
                             self.left_rotate(z);
                         }
                         // Case 3: z是左孩子
-                        (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Black;
-                        (*(*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr())
-                            .parent
-                            .unwrap()
-                            .as_ptr())
-                        .color = Color::Red;
-                        self.right_rotate(
-                            (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).parent,
-                        );
+                        (*(*z.ptr()).parent.ptr()).color = Color::Black;
+                        (*(*(*z.ptr()).parent.ptr()).parent.unwrap().as_ptr()).color = Color::Red;
+                        self.right_rotate((*(*z.ptr()).parent.ptr()).parent);
                     }
                 } else {
                     // 对称情况
-                    let y = (*(*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr())
-                        .parent
-                        .unwrap()
-                        .as_ptr())
-                    .lch;
-                    if (*y.unwrap().as_ptr()).is_red() {
-                        (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Black;
-                        (*y.unwrap().as_ptr()).color = Color::Black;
-                        (*(*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr())
-                            .parent
-                            .unwrap()
-                            .as_ptr())
-                        .color = Color::Red;
-                        z = (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).parent;
+                    let y = (*(*(*z.ptr()).parent.ptr()).parent.unwrap().as_ptr()).lch;
+                    if (*y.ptr()).is_red() {
+                        (*(*z.ptr()).parent.ptr()).color = Color::Black;
+                        (*y.ptr()).color = Color::Black;
+                        (*(*(*z.ptr()).parent.ptr()).parent.unwrap().as_ptr()).color = Color::Red;
+                        z = (*(*z.ptr()).parent.ptr()).parent;
                     } else {
-                        if z == (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).lch {
-                            z = (*z.unwrap().as_ptr()).parent;
+                        if z == (*(*z.ptr()).parent.ptr()).lch {
+                            z = (*z.ptr()).parent;
                             self.right_rotate(z);
                         }
-                        (*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Black;
-                        (*(*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr())
-                            .parent
-                            .unwrap()
-                            .as_ptr())
-                        .color = Color::Red;
-                        self.left_rotate((*(*z.unwrap().as_ptr()).parent.unwrap().as_ptr()).parent);
+                        (*(*z.ptr()).parent.ptr()).color = Color::Black;
+                        (*(*(*z.ptr()).parent.ptr()).parent.unwrap().as_ptr()).color = Color::Red;
+                        self.left_rotate((*(*z.ptr()).parent.ptr()).parent);
                     }
                 }
             }
-            (*self.root.unwrap().as_ptr()).color = Color::Black; // 确保root为黑
+            (*self.root.ptr()).color = Color::Black; // 确保root为黑
         }
     }
 
@@ -329,21 +309,21 @@ impl<K: Ord, V> RBTree<K, V> {
                 // set y
                 let y = (*x_p.as_ptr()).rch;
                 // 将y的左子树变为x的右子树
-                (*x_p.as_ptr()).rch = (*y.unwrap().as_ptr()).lch;
-                if (*y.unwrap().as_ptr()).lch != self.nil {
-                    (*(*y.unwrap().as_ptr()).lch.unwrap().as_ptr()).parent = x;
+                (*x_p.as_ptr()).rch = (*y.ptr()).lch;
+                if (*y.ptr()).lch != self.nil {
+                    (*(*y.ptr()).lch.ptr()).parent = x;
                 }
                 // 连接父级
-                (*y.unwrap().as_ptr()).parent = (*x_p.as_ptr()).parent;
+                (*y.ptr()).parent = (*x_p.as_ptr()).parent;
                 if (*x_p.as_ptr()).parent == self.nil {
                     self.root = y;
-                } else if x == (*(*x_p.as_ptr()).parent.unwrap().as_ptr()).lch {
-                    (*(*x_p.as_ptr()).parent.unwrap().as_ptr()).lch = y;
+                } else if x == (*(*x_p.as_ptr()).parent.ptr()).lch {
+                    (*(*x_p.as_ptr()).parent.ptr()).lch = y;
                 } else {
-                    (*(*x_p.as_ptr()).parent.unwrap().as_ptr()).rch = y;
+                    (*(*x_p.as_ptr()).parent.ptr()).rch = y;
                 }
                 // 将x放在y的左边
-                (*y.unwrap().as_ptr()).lch = x;
+                (*y.ptr()).lch = x;
                 (*x_p.as_ptr()).parent = y;
                 return Some(());
             }
@@ -378,21 +358,21 @@ impl<K: Ord, V> RBTree<K, V> {
                 // set x
                 let x = (*y_p.as_ptr()).lch;
                 // 将x的右子树变为y的左子树
-                (*y_p.as_ptr()).lch = (*x.unwrap().as_ptr()).rch;
-                if (*x.unwrap().as_ptr()).rch != self.nil {
-                    (*(*x.unwrap().as_ptr()).rch.unwrap().as_ptr()).parent = y;
+                (*y_p.as_ptr()).lch = (*x.ptr()).rch;
+                if (*x.ptr()).rch != self.nil {
+                    (*(*x.ptr()).rch.ptr()).parent = y;
                 }
                 // 连接父级
-                (*x.unwrap().as_ptr()).parent = (*y_p.as_ptr()).parent;
+                (*x.ptr()).parent = (*y_p.as_ptr()).parent;
                 if (*y_p.as_ptr()).parent == self.nil {
                     self.root = x;
-                } else if y == (*(*y_p.as_ptr()).parent.unwrap().as_ptr()).lch {
-                    (*(*y_p.as_ptr()).parent.unwrap().as_ptr()).lch = x;
+                } else if y == (*(*y_p.as_ptr()).parent.ptr()).lch {
+                    (*(*y_p.as_ptr()).parent.ptr()).lch = x;
                 } else {
-                    (*(*y_p.as_ptr()).parent.unwrap().as_ptr()).rch = x;
+                    (*(*y_p.as_ptr()).parent.ptr()).rch = x;
                 }
                 // 将y放在x的右边
-                (*x.unwrap().as_ptr()).rch = y;
+                (*x.ptr()).rch = y;
                 (*y_p.as_ptr()).parent = x;
                 return Some(());
             }
@@ -408,32 +388,32 @@ impl<K: Ord, V> RBTree<K, V> {
 
         unsafe {
             let mut y = z.clone();
-            let mut y_original_color = (*y.unwrap().as_ptr()).color;
+            let mut y_original_color = (*y.ptr()).color;
 
             let x; // y的原始位置
-            if (*z.unwrap().as_ptr()).lch == self.nil {
-                x = (*z.unwrap().as_ptr()).rch;
-                self.transplant(z, (*z.unwrap().as_ptr()).rch);
-            } else if (*z.unwrap().as_ptr()).rch == self.nil {
-                x = (*z.unwrap().as_ptr()).lch;
-                self.transplant(z, (*z.unwrap().as_ptr()).lch);
+            if (*z.ptr()).lch == self.nil {
+                x = (*z.ptr()).rch;
+                self.transplant(z, (*z.ptr()).rch);
+            } else if (*z.ptr()).rch == self.nil {
+                x = (*z.ptr()).lch;
+                self.transplant(z, (*z.ptr()).lch);
             } else {
-                y = self.min((*z.unwrap().as_ptr()).rch);
-                y_original_color = (*y.unwrap().as_ptr()).color;
+                y = self.min((*z.ptr()).rch);
+                y_original_color = (*y.ptr()).color;
 
-                x = (*y.unwrap().as_ptr()).rch;
-                if (*y.unwrap().as_ptr()).parent == z {
-                    (*x.unwrap().as_ptr()).parent = y;
+                x = (*y.ptr()).rch;
+                if (*y.ptr()).parent == z {
+                    (*x.ptr()).parent = y;
                 } else {
-                    self.transplant(y, (*y.unwrap().as_ptr()).rch);
-                    (*y.unwrap().as_ptr()).rch = (*z.unwrap().as_ptr()).rch;
-                    (*(*y.unwrap().as_ptr()).rch.unwrap().as_ptr()).parent = y;
+                    self.transplant(y, (*y.ptr()).rch);
+                    (*y.ptr()).rch = (*z.ptr()).rch;
+                    (*(*y.ptr()).rch.ptr()).parent = y;
                 }
 
                 self.transplant(z, y);
-                (*y.unwrap().as_ptr()).lch = (*z.unwrap().as_ptr()).lch;
-                (*(*y.unwrap().as_ptr()).lch.unwrap().as_ptr()).parent = y;
-                (*y.unwrap().as_ptr()).color = (*z.unwrap().as_ptr()).color;
+                (*y.ptr()).lch = (*z.ptr()).lch;
+                (*(*y.ptr()).lch.ptr()).parent = y;
+                (*y.ptr()).color = (*z.ptr()).color;
             }
 
             if y_original_color == Color::Black {
@@ -441,20 +421,20 @@ impl<K: Ord, V> RBTree<K, V> {
             }
 
             self.len -= 1;
-            NonNull::new(z.unwrap().as_ptr())
+            NonNull::new(z.ptr())
         }
     }
 
     unsafe fn transplant(&mut self, u: Link<K, V>, v: Link<K, V>) {
         unsafe {
-            if (*u.unwrap().as_ptr()).parent == self.nil {
+            if (*u.ptr()).parent == self.nil {
                 self.root = v;
-            } else if u == (*(*u.unwrap().as_ptr()).parent.unwrap().as_ptr()).lch {
-                (*(*u.unwrap().as_ptr()).parent.unwrap().as_ptr()).lch = v;
+            } else if u == (*(*u.ptr()).parent.ptr()).lch {
+                (*(*u.ptr()).parent.ptr()).lch = v;
             } else {
-                (*(*u.unwrap().as_ptr()).parent.unwrap().as_ptr()).rch = v;
+                (*(*u.ptr()).parent.ptr()).rch = v;
             }
-            (*v.unwrap().as_ptr()).parent = (*u.unwrap().as_ptr()).parent;
+            (*v.ptr()).parent = (*u.ptr()).parent;
         }
     }
 
@@ -468,75 +448,69 @@ impl<K: Ord, V> RBTree<K, V> {
     fn remove_fixup(&mut self, x: Link<K, V>) {
         unsafe {
             let mut x = x;
-            while x != self.root && (*x.unwrap().as_ptr()).is_black() {
-                if x == (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).lch {
-                    let mut w = (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).rch; // 兄弟节点
+            while x != self.root && (*x.ptr()).is_black() {
+                if x == (*(*x.ptr()).parent.ptr()).lch {
+                    let mut w = (*(*x.ptr()).parent.ptr()).rch; // 兄弟节点
 
-                    if (*w.unwrap().as_ptr()).is_red() {
+                    if (*w.ptr()).is_red() {
                         // Case 1: 兄弟节点w是红色的
-                        (*w.unwrap().as_ptr()).color = Color::Black;
-                        (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Red;
-                        self.left_rotate((*x.unwrap().as_ptr()).parent);
-                        w = (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).rch;
+                        (*w.ptr()).color = Color::Black;
+                        (*(*x.ptr()).parent.ptr()).color = Color::Red;
+                        self.left_rotate((*x.ptr()).parent);
+                        w = (*(*x.ptr()).parent.ptr()).rch;
                     }
 
-                    if (*(*w.unwrap().as_ptr()).lch.unwrap().as_ptr()).is_black()
-                        && (*(*w.unwrap().as_ptr()).rch.unwrap().as_ptr()).is_black()
-                    {
+                    if (*(*w.ptr()).lch.ptr()).is_black() && (*(*w.ptr()).rch.ptr()).is_black() {
                         // Case 2: 兄弟节点w是黑色，且w的两个子节点都是黑色的
-                        (*w.unwrap().as_ptr()).color = Color::Red;
-                        x = (*x.unwrap().as_ptr()).parent;
+                        (*w.ptr()).color = Color::Red;
+                        x = (*x.ptr()).parent;
                         continue;
                     }
 
-                    if (*(*w.unwrap().as_ptr()).rch.unwrap().as_ptr()).is_black() {
+                    if (*(*w.ptr()).rch.ptr()).is_black() {
                         // Case 3: 兄弟节点w是黑色，w的左孩子是红色，右孩子是黑色
-                        (*(*w.unwrap().as_ptr()).lch.unwrap().as_ptr()).color = Color::Black;
-                        (*w.unwrap().as_ptr()).color = Color::Red;
+                        (*(*w.ptr()).lch.ptr()).color = Color::Black;
+                        (*w.ptr()).color = Color::Red;
                         self.right_rotate(w);
-                        w = (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).rch;
+                        w = (*(*x.ptr()).parent.ptr()).rch;
                     }
                     // Case 4: 兄弟节点w是黑色，w的右孩子是红色
-                    (*w.unwrap().as_ptr()).color =
-                        (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).color;
-                    (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Black;
-                    (*(*w.unwrap().as_ptr()).rch.unwrap().as_ptr()).color = Color::Black;
-                    self.left_rotate((*x.unwrap().as_ptr()).parent);
+                    (*w.ptr()).color = (*(*x.ptr()).parent.ptr()).color;
+                    (*(*x.ptr()).parent.ptr()).color = Color::Black;
+                    (*(*w.ptr()).rch.ptr()).color = Color::Black;
+                    self.left_rotate((*x.ptr()).parent);
                     x = self.root; // 终止循环
                 } else {
                     // 对称情况
-                    let mut w = (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).lch;
+                    let mut w = (*(*x.ptr()).parent.ptr()).lch;
 
-                    if (*w.unwrap().as_ptr()).is_red() {
-                        (*w.unwrap().as_ptr()).color = Color::Black;
-                        (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Red;
-                        self.right_rotate((*x.unwrap().as_ptr()).parent);
-                        w = (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).lch;
+                    if (*w.ptr()).is_red() {
+                        (*w.ptr()).color = Color::Black;
+                        (*(*x.ptr()).parent.ptr()).color = Color::Red;
+                        self.right_rotate((*x.ptr()).parent);
+                        w = (*(*x.ptr()).parent.ptr()).lch;
                     }
 
-                    if (*(*w.unwrap().as_ptr()).lch.unwrap().as_ptr()).is_black()
-                        && (*(*w.unwrap().as_ptr()).rch.unwrap().as_ptr()).is_black()
-                    {
-                        (*w.unwrap().as_ptr()).color = Color::Red;
-                        x = (*x.unwrap().as_ptr()).parent;
+                    if (*(*w.ptr()).lch.ptr()).is_black() && (*(*w.ptr()).rch.ptr()).is_black() {
+                        (*w.ptr()).color = Color::Red;
+                        x = (*x.ptr()).parent;
                         continue;
                     }
 
-                    if (*(*w.unwrap().as_ptr()).lch.unwrap().as_ptr()).is_black() {
-                        (*(*w.unwrap().as_ptr()).rch.unwrap().as_ptr()).color = Color::Black;
-                        (*w.unwrap().as_ptr()).color = Color::Red;
+                    if (*(*w.ptr()).lch.ptr()).is_black() {
+                        (*(*w.ptr()).rch.ptr()).color = Color::Black;
+                        (*w.ptr()).color = Color::Red;
                         self.left_rotate(w);
-                        w = (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).lch;
+                        w = (*(*x.ptr()).parent.ptr()).lch;
                     }
-                    (*w.unwrap().as_ptr()).color =
-                        (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).color;
-                    (*(*x.unwrap().as_ptr()).parent.unwrap().as_ptr()).color = Color::Black;
-                    (*(*w.unwrap().as_ptr()).lch.unwrap().as_ptr()).color = Color::Black;
-                    self.right_rotate((*x.unwrap().as_ptr()).parent);
+                    (*w.ptr()).color = (*(*x.ptr()).parent.ptr()).color;
+                    (*(*x.ptr()).parent.ptr()).color = Color::Black;
+                    (*(*w.ptr()).lch.ptr()).color = Color::Black;
+                    self.right_rotate((*x.ptr()).parent);
                     x = self.root;
                 }
             }
-            (*x.unwrap().as_ptr()).color = Color::Black;
+            (*x.ptr()).color = Color::Black;
         }
     }
 }
@@ -545,7 +519,7 @@ impl<K, V> Drop for RBTree<K, V> {
     fn drop(&mut self) {
         unsafe {
             Self::free_all(self, self.root);
-            let _ = Box::from_raw(self.nil.unwrap().as_ptr()); // 释放 nil
+            let _ = Box::from_raw(self.nil.ptr()); // 释放 nil
         }
     }
 }
@@ -563,8 +537,8 @@ mod tests {
             for &k in &[5, 10, 15, 20, 25, 30, 35] {
                 let node = tree.search_tree(&k);
                 assert!(node.is_some(), "Key {} should exist", k);
-                assert_eq!((*node.unwrap().as_ptr()).key, k);
-                assert_eq!((*node.unwrap().as_ptr()).val, k + 100);
+                assert_eq!((*node.ptr()).key, k);
+                assert_eq!((*node.ptr()).val, k + 100);
             }
 
             assert!(tree.search_tree(&0).is_none(), "Key 0 should not exist");
@@ -577,7 +551,7 @@ mod tests {
         let tree = build_test_tree();
         unsafe {
             let min_node = tree.min(tree.root);
-            assert_eq!((*min_node.unwrap().as_ptr()).key, 5);
+            assert_eq!((*min_node.ptr()).key, 5);
         }
     }
 
@@ -586,7 +560,7 @@ mod tests {
         let tree = build_test_tree();
         unsafe {
             let max_node = tree.max(tree.root);
-            assert_eq!((*max_node.unwrap().as_ptr()).key, 35);
+            assert_eq!((*max_node.ptr()).key, 35);
         }
     }
 
@@ -596,7 +570,7 @@ mod tests {
         unsafe {
             let link_10 = tree.search_tree(&10);
             let succ_10 = tree.successor(link_10);
-            assert_eq!((*succ_10.unwrap().as_ptr()).key, 15);
+            assert_eq!((*succ_10.ptr()).key, 15);
 
             let link_35 = tree.search_tree(&35);
             let succ_35 = tree.successor(link_35);
@@ -610,7 +584,7 @@ mod tests {
         unsafe {
             let link_25 = tree.search_tree(&25);
             let pred_25 = tree.predecessor(link_25);
-            assert_eq!((*pred_25.unwrap().as_ptr()).key, 20);
+            assert_eq!((*pred_25.ptr()).key, 20);
 
             let link_5 = tree.search_tree(&5);
             let pred_5 = tree.predecessor(link_5);
@@ -634,8 +608,8 @@ mod tests {
                     node.unwrap(),
                     "Inserted node not found correctly"
                 );
-                assert_eq!((*found.unwrap().as_ptr()).key, key);
-                assert_eq!((*found.unwrap().as_ptr()).val, val);
+                assert_eq!((*found.ptr()).key, key);
+                assert_eq!((*found.ptr()).val, val);
             }
 
             check_red_black_properties(&tree);
@@ -655,10 +629,10 @@ mod tests {
         for &key in &remove_keys {
             unsafe {
                 let node = tree.search_tree(&key);
-                assert_eq!((*node.unwrap().as_ptr()).key, key);
+                assert_eq!((*node.ptr()).key, key);
 
                 let removed = tree.remove(Some(node.unwrap()));
-                assert_eq!((*removed.unwrap().as_ptr()).key, key);
+                assert_eq!((*removed.ptr()).key, key);
 
                 assert!(
                     tree.search_tree(&key).is_none(),
@@ -691,11 +665,7 @@ mod tests {
             }
 
             // 根必须为黑色
-            assert_eq!(
-                (*tree.root.unwrap().as_ptr()).color,
-                Color::Black,
-                "Root must be black"
-            );
+            assert_eq!((*tree.root.ptr()).color, Color::Black, "Root must be black");
 
             // 递归检查
             fn dfs<K: Ord + Display, V: Display>(tree: &RBTree<K, V>, node: Link<K, V>) -> usize {
@@ -710,7 +680,7 @@ mod tests {
                     if n.color == Color::Red {
                         if n.lch != tree.nil {
                             assert_eq!(
-                                (*n.lch.unwrap().as_ptr()).color,
+                                (*n.lch.ptr()).color,
                                 Color::Black,
                                 "Red node {} has red left child",
                                 n.key
@@ -718,7 +688,7 @@ mod tests {
                         }
                         if n.rch != tree.nil {
                             assert_eq!(
-                                (*n.rch.unwrap().as_ptr()).color,
+                                (*n.rch.ptr()).color,
                                 Color::Black,
                                 "Red node {} has red right child",
                                 n.key
@@ -729,18 +699,18 @@ mod tests {
                     // 父子关系一致性
                     if n.lch != tree.nil {
                         assert_eq!(
-                            (*n.lch.unwrap().as_ptr()).parent,
+                            (*n.lch.ptr()).parent,
                             node,
                             "Left child {} parent mismatch",
-                            (*n.lch.unwrap().as_ptr()).key
+                            (*n.lch.ptr()).key
                         );
                     }
                     if n.rch != tree.nil {
                         assert_eq!(
-                            (*n.rch.unwrap().as_ptr()).parent,
+                            (*n.rch.ptr()).parent,
                             node,
                             "Right child {} parent mismatch",
-                            (*n.rch.unwrap().as_ptr()).key
+                            (*n.rch.ptr()).key
                         );
                     }
 
