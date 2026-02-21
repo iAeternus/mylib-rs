@@ -60,7 +60,7 @@ fn bench_decrease_key(c: &mut Criterion) {
                 }
                 for (i, h) in handles.iter().enumerate() {
                     heap.decrease_key(*h, i);
-                } 
+                }
                 while heap.pop().is_some() {}
             })
         });

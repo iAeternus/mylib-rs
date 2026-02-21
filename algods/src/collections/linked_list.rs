@@ -158,7 +158,8 @@ impl<T> LinkedList<T> {
     }
 
     pub fn clear(&mut self) {
-        while let Some(_) = self.pop_front() {}
+        while self.pop_front().is_some() {}
+        // while let Some(_) = self.pop_front() {}
     }
 
     pub fn iter(&'_ self) -> Iter<'_, T> {

@@ -151,17 +151,17 @@ impl<T: Ord> FibonacciHeap<T> {
             assert!(new_val <= (*x).elem);
             (*x).elem = new_val;
 
-            if let Some(y) = (*x).parent {
-                if (*x).elem < (*y.as_ptr()).elem {
-                    self.cut(x, y);
-                    self.cascading_cut(y);
-                }
+            if let Some(y) = (*x).parent
+                && (*x).elem < (*y.as_ptr()).elem
+            {
+                self.cut(x, y);
+                self.cascading_cut(y);
             }
 
-            if let Some(min) = self.min {
-                if (*x).elem < (*min.as_ptr()).elem {
-                    self.min = Some(handle.0);
-                }
+            if let Some(min) = self.min
+                && (*x).elem < (*min.as_ptr()).elem
+            {
+                self.min = Some(handle.0);
             }
         }
     }

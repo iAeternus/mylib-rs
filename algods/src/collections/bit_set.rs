@@ -13,7 +13,7 @@ pub struct BitSetIter<'a> {
 impl BitSet {
     /// 创建一个空集合，容量为 size
     pub fn new(size: usize) -> Self {
-        let n = (size + 63) / 64; // 需要多少个 u64 才能覆盖 size 个元素
+        let n = size.div_ceil(64); // 需要多少个 u64 才能覆盖 size 个元素
         Self {
             bits: vec![0; n],
             size,
