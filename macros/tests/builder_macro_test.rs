@@ -1,4 +1,5 @@
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_builder_macro() {
     let t = trybuild::TestCases::new();
 

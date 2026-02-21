@@ -86,18 +86,13 @@ impl<'a, K: Ord, V> OccupiedEntry<'a, K, V> {
         unsafe { &self.node.unwrap().as_ref().key }
     }
 
-    pub fn remove(self) -> V
-    where
-        V: Clone,
-    {
-        unsafe {
-            let node = self.node.unwrap().as_ptr();
-            let old_val = (*node).val.clone();
-            if let Some(removed) = self.map.tree.remove(self.node) {
-                let _ = Box::from_raw(removed.as_ptr());
-            }
-            old_val
-        }
+    pub fn remove(self) -> V {
+        let (_, val) = self
+            .map
+            .tree
+            .remove(self.node)
+            .expect("occupied entry must exist");
+        val
     }
 }
 

@@ -45,21 +45,10 @@ impl<K: Ord, V> RBTreeMap<K, V> {
         }
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V>
-    where
-        V: Clone,
-    {
-        if let Some(link) = self.tree.search_tree(key) {
-            unsafe {
-                let old_val = (*link.as_ptr()).val.clone();
-                if let Some(removed) = self.tree.remove(Some(link)) {
-                    let _ = Box::from_raw(removed.as_ptr());
-                }
-                Some(old_val)
-            }
-        } else {
-            None
-        }
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        let link = self.tree.search_tree(key)?;
+        let (_, val) = self.tree.remove(Some(link))?;
+        Some(val)
     }
 
     pub fn contains_key(&self, key: &K) -> bool {

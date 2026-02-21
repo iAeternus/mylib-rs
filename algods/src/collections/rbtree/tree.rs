@@ -436,7 +436,7 @@ impl<K: Ord, V> RBTree<K, V> {
     }
 
     /// 删除节点
-    pub fn remove(&mut self, z: Link<K, V>) -> Link<K, V> {
+    pub fn remove(&mut self, z: Link<K, V>) -> Option<(K, V)> {
         if self.len == 0 || z == self.nil {
             return None;
         }
@@ -476,7 +476,9 @@ impl<K: Ord, V> RBTree<K, V> {
             }
 
             self.len -= 1;
-            NonNull::new(z.ptr())
+            let node = Box::from_raw(z.ptr());
+            let Node { key, val, .. } = *node;
+            Some((key, val))
         }
     }
 
@@ -686,8 +688,9 @@ mod tests {
                 let node = tree.search_tree(&key);
                 assert_eq!((*node.ptr()).key, key);
 
-                let removed = tree.remove(Some(node.unwrap()));
-                assert_eq!((*removed.ptr()).key, key);
+                let removed = tree.remove(Some(node.unwrap())).expect("removed");
+                assert_eq!(removed.0, key);
+                assert_eq!(removed.1, key + 1);
 
                 assert!(
                     tree.search_tree(&key).is_none(),

@@ -9,3 +9,7 @@ homepage = "https://github.com/iAeternus"
 [workspace]
 members = ["algods", "macros", "mylib-rs", "num", "xtask"]
 resolver = "3"
+
+[profile.bench]
+debug = true
+strip = "none"
