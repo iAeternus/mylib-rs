@@ -11,6 +11,16 @@ pub struct RBTree<K, V> {
 pub type Link<K, V> = Option<RawLink<K, V>>;
 type RawLink<K, V> = NonNull<Node<K, V>>;
 
+pub(crate) enum EntrySearch<K, V> {
+    Occupied(Link<K, V>),
+    Vacant(VacantPos<K, V>),
+}
+
+pub(crate) struct VacantPos<K, V> {
+    pub(crate) parent: Link<K, V>,
+    pub(crate) insert_left: bool,
+}
+
 trait LinkExt<K, V> {
     fn ptr(self) -> *mut Node<K, V>;
 }
@@ -107,24 +117,65 @@ impl<K, V> RBTree<K, V> {
 }
 
 impl<K: Ord, V> RBTree<K, V> {
-    /// 查找节点
-    pub fn search_tree(&self, key: &K) -> Link<K, V> {
+    pub(crate) fn search_entry(&self, key: &K) -> EntrySearch<K, V> {
         unsafe {
             let mut curr = self.root;
+            let mut parent = self.nil;
+            let mut insert_left = false;
 
             while curr != self.nil {
+                parent = curr;
                 let node = curr.unwrap().as_ref();
 
                 if *key < node.key {
                     curr = node.lch;
+                    insert_left = true;
                 } else if *key > node.key {
                     curr = node.rch;
+                    insert_left = false;
                 } else {
-                    return curr;
+                    return EntrySearch::Occupied(curr);
                 }
             }
 
-            None
+            EntrySearch::Vacant(VacantPos {
+                parent,
+                insert_left,
+            })
+        }
+    }
+
+    pub(crate) fn insert_vacant(
+        &mut self,
+        key: K,
+        val: V,
+        parent: Link<K, V>,
+        insert_left: bool,
+    ) -> Link<K, V> {
+        unsafe {
+            let mut z = Node::new(key, val, Color::Red, self.nil);
+            z.parent = parent;
+            let z_link = NonNull::new(Box::into_raw(Box::new(z)));
+
+            if parent == self.nil {
+                self.root = z_link;
+            } else if insert_left {
+                (*parent.ptr()).lch = z_link;
+            } else {
+                (*parent.ptr()).rch = z_link;
+            }
+
+            self.insert_fixup(z_link);
+            self.len += 1;
+            z_link
+        }
+    }
+
+    /// 查找节点
+    pub fn search_tree(&self, key: &K) -> Link<K, V> {
+        match self.search_entry(key) {
+            EntrySearch::Occupied(link) => link,
+            EntrySearch::Vacant(_) => None,
         }
     }
 
@@ -198,12 +249,12 @@ impl<K: Ord, V> RBTree<K, V> {
         }
     }
 
-    /// 插入 TODO: 这里的insert不应该查树
+    /// 插入 TODO: 这里的insert需要配合entry吗
     pub fn insert(&mut self, key: K, val: V) -> Link<K, V> {
         unsafe {
-            let mut z = Node::new(key, val, Color::Red, self.nil.clone());
-            let mut y = self.nil.clone();
-            let mut x = self.root.clone();
+            let mut z = Node::new(key, val, Color::Red, self.nil);
+            let mut y = self.nil;
+            let mut x = self.root;
 
             while x != self.nil {
                 y = x;

@@ -1,5 +1,9 @@
-use crate::collections::rbtree::tree::RBTree;
-use crate::collections::rbtree::{entry::Entry, iter::*, range::*};
+use crate::collections::rbtree::{
+    entry::Entry,
+    iter::*,
+    range::*,
+    tree::{EntrySearch, RBTree},
+};
 use std::borrow::Borrow;
 use std::ops::RangeBounds;
 
@@ -9,13 +13,6 @@ pub struct RBTreeMap<K, V> {
 }
 
 impl<K: Ord, V> RBTreeMap<K, V> {
-    /// 创建Map，哨兵键值需要传入
-    pub fn new(nil_key: K, nil_val: V) -> Self {
-        Self {
-            tree: RBTree::new(nil_key, nil_val),
-        }
-    }
-
     pub fn len(&self) -> usize {
         self.tree.len()
     }
@@ -55,7 +52,9 @@ impl<K: Ord, V> RBTreeMap<K, V> {
         if let Some(link) = self.tree.search_tree(key) {
             unsafe {
                 let old_val = (*link.as_ptr()).val.clone();
-                self.tree.remove(Some(link));
+                if let Some(removed) = self.tree.remove(Some(link)) {
+                    let _ = Box::from_raw(removed.as_ptr());
+                }
                 Some(old_val)
             }
         } else {
@@ -96,13 +95,21 @@ impl<K: Ord, V> RBTreeMap<K, V> {
     }
 
     pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
-        if let Some(link) = self.tree.search_tree(&key) {
-            Entry::Occupied(crate::collections::rbtree::entry::OccupiedEntry {
-                map: self,
-                node: Some(link),
-            })
-        } else {
-            Entry::Vacant(crate::collections::rbtree::entry::VacantEntry { map: self, key })
+        match self.tree.search_entry(&key) {
+            EntrySearch::Occupied(link) => {
+                Entry::Occupied(crate::collections::rbtree::entry::OccupiedEntry {
+                    map: self,
+                    node: link,
+                })
+            }
+            EntrySearch::Vacant(pos) => {
+                Entry::Vacant(crate::collections::rbtree::entry::VacantEntry {
+                    map: self,
+                    key,
+                    parent: pos.parent,
+                    insert_left: pos.insert_left,
+                })
+            }
         }
     }
 
@@ -145,13 +152,27 @@ impl<K: Ord, V> RBTreeMap<K, V> {
     }
 }
 
+impl<K: Ord + Default, V: Default> RBTreeMap<K, V> {
+    pub fn new() -> Self {
+        Self {
+            tree: RBTree::new(K::default(), V::default()),
+        }
+    }
+}
+
+impl<K: Ord + Default, V: Default> Default for RBTreeMap<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_new_and_len() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         assert_eq!(m.len(), 0);
         assert!(m.is_empty());
 
@@ -162,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
 
         // Insert new keys
         assert_eq!(m.insert(1, 10), None);
@@ -176,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_get() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(1, 10);
         m.insert(2, 20);
         m.insert(3, 30);
@@ -189,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_get_mut() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(1, 10);
 
         if let Some(v) = m.get_mut(&1) {
@@ -200,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_remove() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(1, 10);
         m.insert(2, 20);
         m.insert(3, 30);
@@ -213,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_contains_key() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(1, 10);
         m.insert(2, 20);
 
@@ -224,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_clear() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(1, 10);
         m.insert(2, 20);
         m.insert(3, 30);
@@ -237,7 +258,7 @@ mod tests {
 
     #[test]
     fn test_first_last_key_value() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(2, 20);
         m.insert(1, 10);
         m.insert(3, 30);
@@ -245,14 +266,14 @@ mod tests {
         assert_eq!(m.first_key_value(), Some((&1, &10)));
         assert_eq!(m.last_key_value(), Some((&3, &30)));
 
-        let empty = RBTreeMap::new(0, 0);
+        let empty: RBTreeMap<i32, i32> = RBTreeMap::new();
         assert_eq!(empty.first_key_value(), None);
         assert_eq!(empty.last_key_value(), None);
     }
 
     #[test]
     fn test_iter() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(2, 20);
         m.insert(1, 10);
         m.insert(3, 30);
@@ -266,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_keys() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(2, 20);
         m.insert(1, 10);
         m.insert(3, 30);
@@ -277,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_values() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(2, 20);
         m.insert(1, 10);
         m.insert(3, 30);
@@ -288,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_range() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(1, 10);
         m.insert(2, 20);
         m.insert(3, 30);
@@ -304,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_range_mut() {
-        let mut m = RBTreeMap::new(0, 0);
+        let mut m = RBTreeMap::new();
         m.insert(1, 10);
         m.insert(2, 20);
         m.insert(3, 30);

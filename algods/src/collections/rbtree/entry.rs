@@ -1,6 +1,6 @@
 use crate::collections::rbtree::{map::RBTreeMap, tree::Link};
 
-/// 对 map 中某个 key 的一次性访问视图
+/// 瀵?map 涓煇涓?key 鐨勪竴娆℃€ц闂鍥?
 pub enum Entry<'a, K, V> {
     Vacant(VacantEntry<'a, K, V>),
     Occupied(OccupiedEntry<'a, K, V>),
@@ -9,6 +9,8 @@ pub enum Entry<'a, K, V> {
 pub struct VacantEntry<'a, K, V> {
     pub(crate) map: &'a mut RBTreeMap<K, V>,
     pub(crate) key: K,
+    pub(crate) parent: Link<K, V>,
+    pub(crate) insert_left: bool,
 }
 
 pub struct OccupiedEntry<'a, K, V> {
@@ -17,7 +19,7 @@ pub struct OccupiedEntry<'a, K, V> {
 }
 
 impl<'a, K: Ord, V> Entry<'a, K, V> {
-    /// 确保值存在，通过插入默认值来处理 Vacant 情况
+    /// 纭繚鍊煎瓨鍦紝閫氳繃鎻掑叆榛樿鍊兼潵澶勭悊 Vacant 鎯呭喌
     pub fn or_insert(self, default: V) -> &'a mut V {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
@@ -25,7 +27,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
-    /// 确保值存在，通过闭包计算默认值来处理 Vacant 情况
+    /// 纭繚鍊煎瓨鍦紝閫氳繃闂寘璁＄畻榛樿鍊兼潵澶勭悊 Vacant 鎯呭喌
     pub fn or_insert_with<F: FnOnce() -> V>(self, default: F) -> &'a mut V {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
@@ -33,7 +35,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
-    /// 如果为 Occupied 则修改值
+    /// 濡傛灉涓?Occupied 鍒欎慨鏀瑰€?
     pub fn and_modify<F: FnOnce(&mut V)>(self, f: F) -> Self {
         match self {
             Entry::Occupied(mut entry) => {
@@ -44,7 +46,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
-    /// 获取值的引用
+    /// 鑾峰彇鍊肩殑寮曠敤
     pub fn key(&self) -> &K {
         match self {
             Entry::Occupied(entry) => unsafe { &entry.node.unwrap().as_ref().key },
@@ -55,7 +57,10 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
 
 impl<'a, K: Ord, V> VacantEntry<'a, K, V> {
     pub fn insert(self, val: V) -> &'a mut V {
-        let link = self.map.tree.insert(self.key, val);
+        let link = self
+            .map
+            .tree
+            .insert_vacant(self.key, val, self.parent, self.insert_left);
         unsafe { &mut (*link.unwrap().as_ptr()).val }
     }
 }
@@ -91,7 +96,9 @@ impl<'a, K: Ord, V> OccupiedEntry<'a, K, V> {
         unsafe {
             let node = self.node.unwrap().as_ptr();
             let old_val = (*node).val.clone();
-            self.map.tree.remove(self.node);
+            if let Some(removed) = self.map.tree.remove(self.node) {
+                let _ = Box::from_raw(removed.as_ptr());
+            }
             old_val
         }
     }
@@ -108,7 +115,7 @@ mod tests {
         let v = map.entry(10).or_insert(42);
         assert_eq!(*v, 42);
 
-        // 已插入
+        // 宸叉彃鍏?
         assert_eq!(map.get(&10), Some(&42));
         assert_eq!(map.len(), 1);
     }
@@ -126,7 +133,7 @@ mod tests {
         assert_eq!(*v, 100);
         assert_eq!(called, 1);
 
-        // 再次 entry，不应再调用
+        // 鍐嶆 entry锛屼笉搴斿啀璋冪敤
         let v2 = map.entry(1).or_insert_with(|| {
             called += 1;
             200
@@ -228,6 +235,6 @@ mod tests {
     }
 
     fn new_i32_i32_map() -> RBTreeMap<i32, i32> {
-        RBTreeMap::new(0, 0)
+        RBTreeMap::new()
     }
 }

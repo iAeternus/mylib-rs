@@ -17,7 +17,7 @@ fn bench_insert(c: &mut Criterion) {
 
     group.bench_function("RBTreeMap", |b| {
         b.iter(|| {
-            let mut map = RBTreeMap::new(0, 0);
+            let mut map = RBTreeMap::new();
             for &k in &data {
                 map.insert(black_box(k), black_box(k));
             }
@@ -39,7 +39,7 @@ fn bench_insert(c: &mut Criterion) {
 fn bench_get(c: &mut Criterion) {
     let data = build_data();
 
-    let mut rbt = RBTreeMap::new(0, 0);
+    let mut rbt = RBTreeMap::new();
     let mut std = BTreeMap::new();
 
     for &k in &data {
@@ -71,7 +71,7 @@ fn bench_get(c: &mut Criterion) {
 fn bench_iter(c: &mut Criterion) {
     let data = build_data();
 
-    let mut rbt = RBTreeMap::new(0, 0);
+    let mut rbt = RBTreeMap::new();
     let mut std = BTreeMap::new();
 
     for &k in &data {
@@ -103,7 +103,7 @@ fn bench_iter(c: &mut Criterion) {
 fn bench_range(c: &mut Criterion) {
     let data = build_data();
 
-    let mut rbt = RBTreeMap::new(0, 0);
+    let mut rbt = RBTreeMap::new();
     let mut std = BTreeMap::new();
 
     for &k in &data {
