@@ -46,7 +46,7 @@ impl BigInteger {
     pub const BASE: u32 = 100_000_000;
 
     /// 单个数字块表示的十进制位数（`BASE = 10^WIDTH`）
-    pub const WIDTH: usize = 8;
+    const WIDTH: usize = 8;
 
     pub(crate) fn from_digits(sign: Sign, mut digits: Vec<u32>) -> Self {
         // 去除高位前导 0
