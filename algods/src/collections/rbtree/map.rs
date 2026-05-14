@@ -1,4 +1,5 @@
 use crate::collections::rbtree::{
+    OccupiedEntry, VacantEntry,
     entry::Entry,
     iter::*,
     range::*,
@@ -85,20 +86,16 @@ impl<K: Ord, V> RBTreeMap<K, V> {
 
     pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
         match self.tree.search_entry(&key) {
-            EntrySearch::Occupied(link) => {
-                Entry::Occupied(crate::collections::rbtree::entry::OccupiedEntry {
-                    map: self,
-                    node: link,
-                })
-            }
-            EntrySearch::Vacant(pos) => {
-                Entry::Vacant(crate::collections::rbtree::entry::VacantEntry {
-                    map: self,
-                    key,
-                    parent: pos.parent,
-                    insert_left: pos.insert_left,
-                })
-            }
+            EntrySearch::Occupied(link) => Entry::Occupied(OccupiedEntry {
+                map: self,
+                node: link,
+            }),
+            EntrySearch::Vacant(pos) => Entry::Vacant(VacantEntry {
+                map: self,
+                key,
+                parent: pos.parent,
+                insert_left: pos.insert_left,
+            }),
         }
     }
 
