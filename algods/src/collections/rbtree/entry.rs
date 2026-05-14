@@ -1,6 +1,6 @@
 use crate::collections::rbtree::{map::RBTreeMap, tree::Link};
 
-/// 瀵?map 涓煇涓?key 鐨勪竴娆℃€ц闂鍥?
+/// 对 map 中某个 key 的一次性访问视图
 pub enum Entry<'a, K, V> {
     Vacant(VacantEntry<'a, K, V>),
     Occupied(OccupiedEntry<'a, K, V>),
@@ -19,7 +19,7 @@ pub struct OccupiedEntry<'a, K, V> {
 }
 
 impl<'a, K: Ord, V> Entry<'a, K, V> {
-    /// 纭繚鍊煎瓨鍦紝閫氳繃鎻掑叆榛樿鍊兼潵澶勭悊 Vacant 鎯呭喌
+    /// 确保值存在，通过插入默认值来处理 Vacant 情况
     pub fn or_insert(self, default: V) -> &'a mut V {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
@@ -27,7 +27,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
-    /// 纭繚鍊煎瓨鍦紝閫氳繃闂寘璁＄畻榛樿鍊兼潵澶勭悊 Vacant 鎯呭喌
+    /// 确保值存在，通过闭包计算默认值来处理 Vacant 情况
     pub fn or_insert_with<F: FnOnce() -> V>(self, default: F) -> &'a mut V {
         match self {
             Entry::Occupied(entry) => entry.into_mut(),
@@ -35,7 +35,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
-    /// 濡傛灉涓?Occupied 鍒欎慨鏀瑰€?
+    /// 如果为 Occupied 则修改值
     pub fn and_modify<F: FnOnce(&mut V)>(self, f: F) -> Self {
         match self {
             Entry::Occupied(mut entry) => {
@@ -46,7 +46,7 @@ impl<'a, K: Ord, V> Entry<'a, K, V> {
         }
     }
 
-    /// 鑾峰彇鍊肩殑寮曠敤
+    /// 获取值的引用
     pub fn key(&self) -> &K {
         match self {
             Entry::Occupied(entry) => unsafe { &entry.node.unwrap().as_ref().key },
@@ -107,7 +107,7 @@ mod tests {
         let v = map.entry(10).or_insert(42);
         assert_eq!(*v, 42);
 
-        // 宸叉彃鍏?
+        // 已插入
         assert_eq!(map.get(&10), Some(&42));
         assert_eq!(map.len(), 1);
     }
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(*v, 100);
         assert_eq!(called, 1);
 
-        // 鍐嶆 entry锛屼笉搴斿啀璋冪敤
+        // 再次 entry，不应再调用
         let v2 = map.entry(1).or_insert_with(|| {
             called += 1;
             200
