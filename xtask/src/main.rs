@@ -77,11 +77,7 @@ fn run_task(root: &PathBuf, task: Task) -> Result<()> {
 fn run_task_with_args(root: &PathBuf, task: Task, extra_args: &[String]) -> Result<()> {
     match task {
         Task::Fmt => {
-            let mut args = vec![
-                "fmt".to_string(),
-                "--all".to_string(),
-                "--check".to_string(),
-            ];
+            let mut args = vec!["fmt".to_string(), "--all".to_string()];
             args.extend_from_slice(extra_args);
             run_cargo(root, "fmt", &args)
         }
