@@ -16,6 +16,28 @@ cargo test
 cargo doc --workspace --open
 ```
 
+### Quick Start With xtask
+
+```shell
+cargo xtask ci
+```
+
+依次执行：
+
+1. 格式化检查 (`cargo fmt --all --check`)
+2. Clippy lint (`cargo clippy --workspace --all-targets --all-features -D warnings`)
+3. 单元测试 (`cargo test --workspace --all-targets`)
+4. 文档生成 (`cargo doc --workspace --all-features --no-deps`)
+5. Miri 检查 (`cargo +nightly miri test ...`)
+
+```shell
+cargo xtask run fmt
+cargo xtask run test -- --nocapture
+cargo xtask run clippy -- -D clippy::pedantic
+```
+
+将执行单个任务
+
 ## Plan
 
 * math

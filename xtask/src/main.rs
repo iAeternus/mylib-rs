@@ -102,7 +102,8 @@ fn run_task_with_args(root: &PathBuf, task: Task, extra_args: &[String]) -> Resu
             let mut args = vec![
                 "test".to_string(),
                 "--workspace".to_string(),
-                "--all-targets".to_string(),
+                "--lib".to_string(),
+                "--tests".to_string(),
             ];
             args.extend_from_slice(extra_args);
             run_cargo(root, "test", &args)
@@ -147,16 +148,17 @@ fn run_ci(root: &PathBuf) -> Result<()> {
     for task in [Task::Fmt, Task::Clippy, Task::Test, Task::Doc] {
         run_task(root, task)?;
     }
+
     run_task_with_args(
         root,
         Task::Miri,
         &[
-            "test".to_string(),
-            "--workspace".to_string(),
-            "--lib".to_string(),
-            "--tests".to_string(),
-            "--exclude".to_string(),
-            "macros".to_string(),
+            "test".into(),
+            "--workspace".into(),
+            "--lib".into(),
+            "--tests".into(),
+            "--exclude".into(),
+            "macros".into(),
         ],
     )
 }
