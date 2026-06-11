@@ -20,37 +20,49 @@ use crate::thread_pool::{
 
 pub(crate) type Task = Box<dyn FnOnce() + Send + 'static>;
 
+/// 线程池操作错误。
 #[derive(Debug)]
 pub enum ThreadPoolError {
+    /// 池已关闭，拒绝新任务。
     Closed,
+    /// 队列已满（Abort 策略下）。
     QueueFull,
 }
 
+/// 异步任务句柄，通过 `join()` 等待结果。
 pub struct TaskHandle<T> {
     receiver: cb_channel::Receiver<T>,
 }
 
 impl<T> TaskHandle<T> {
+    /// 阻塞等待任务完成并获取返回值。
     pub fn join(self) -> Result<T, cb_channel::RecvError> {
         self.receiver.recv()
     }
 }
 
+/// Worker 与提交者共享的内部状态。
 pub(crate) struct PoolState {
     pub shutdown: AtomicBool,
     pub shutdown_now: AtomicBool,
+    /// 已提交未完成的任务数（用于容量控制）。
     pub pending: AtomicUsize,
+    /// 容量上限。0 = 无限制。
     pub capacity: usize,
+    /// 已退出的 Worker 数。
     pub exited: AtomicUsize,
     pub sleeper: Sleeper,
     pub stats: Arc<SharedStats>,
+    /// 用于阻塞提交者的锁（Block 策略 + async wait）。
     pub blocker_lock: Mutex<()>,
     pub blocker_cvar: Condvar,
 }
 
 #[allow(dead_code)]
 struct PoolInner {
+    /// 优先级队列组，索引 0 = 最高优先级。
     injectors: Arc<Vec<Injector<Task>>>,
+    /// 跨 Worker 窃取句柄。
     stealers: Arc<Vec<Stealer<Task>>>,
     workers: Vec<JoinHandle<()>>,
     state: Arc<PoolState>,
@@ -73,15 +85,27 @@ impl Drop for PoolInner {
     }
 }
 
+/// 基于工作窃取的多级优先级线程池。
+///
+/// # 示例
+/// ```
+/// use concurrency::thread_pool::ThreadPool;
+///
+/// let pool = ThreadPool::new(4);
+/// pool.exec(|| println!("hello")).unwrap();
+/// pool.shutdown();
+/// ```
 pub struct ThreadPool {
     inner: Option<Box<PoolInner>>,
 }
 
 impl ThreadPool {
+    /// 创建指定 Worker 数的线程池（其余参数取默认值）。
     pub fn new(count: usize) -> Self {
         ThreadPoolBuilder::default().thread_count(count).build()
     }
 
+    /// 返回构建器，可定制各项参数。
     pub fn builder() -> ThreadPoolBuilder {
         ThreadPoolBuilder::default()
     }
@@ -124,7 +148,7 @@ impl ThreadPool {
                     .spawn(move || {
                         worker_loop(id, worker, st, inj, s);
                     })
-                    .expect("failed to spawn worker thread")
+                    .expect("spawn worker thread")
             })
             .collect();
 
@@ -141,11 +165,18 @@ impl ThreadPool {
     }
 
     fn inner(&self) -> &PoolInner {
-        self.inner
-            .as_ref()
-            .expect("ThreadPool operation on terminated pool")
+        self.inner.as_ref().expect("操作已终止的线程池")
     }
 
+    /// 提交任务（不关心返回值），使用默认优先级。
+    ///
+    /// # 示例
+    /// ```
+    /// # use concurrency::thread_pool::ThreadPool;
+    /// let pool = ThreadPool::new(2);
+    /// pool.exec(|| println!("async task")).unwrap();
+    /// pool.shutdown();
+    /// ```
     pub fn exec<F>(&self, task: F) -> Result<(), ThreadPoolError>
     where
         F: FnOnce() + Send + 'static,
@@ -153,6 +184,7 @@ impl ThreadPool {
         self.submit(Priority::default(), Box::new(task), false)
     }
 
+    /// 非阻塞版 `exec`，满队列时不阻塞直接返回 `Err(QueueFull)`。
     pub fn try_exec<F>(&self, task: F) -> Result<(), ThreadPoolError>
     where
         F: FnOnce() + Send + 'static,
@@ -160,6 +192,7 @@ impl ThreadPool {
         self.submit(Priority::default(), Box::new(task), true)
     }
 
+    /// 提交指定优先级的任务。
     pub fn exec_with_priority<P, F>(&self, priority: P, task: F) -> Result<(), ThreadPoolError>
     where
         P: Into<Priority>,
@@ -168,6 +201,16 @@ impl ThreadPool {
         self.submit(priority.into(), Box::new(task), false)
     }
 
+    /// 提交任务并通过 `TaskHandle::join()` 获取返回值。
+    ///
+    /// # 示例
+    /// ```
+    /// # use concurrency::thread_pool::ThreadPool;
+    /// let pool = ThreadPool::new(4);
+    /// let handle = pool.spawn(|| 40 + 2).unwrap();
+    /// assert_eq!(handle.join().unwrap(), 42);
+    /// pool.shutdown();
+    /// ```
     pub fn spawn<F, R>(&self, f: F) -> Result<TaskHandle<R>, ThreadPoolError>
     where
         F: FnOnce() -> R + Send + 'static,
@@ -176,6 +219,7 @@ impl ThreadPool {
         self.spawn_with_priority(Priority::default(), f)
     }
 
+    /// 提交指定优先级的任务并获取返回值。
     pub fn spawn_with_priority<P, F, R>(
         &self,
         priority: P,
@@ -195,6 +239,7 @@ impl ThreadPool {
         Ok(TaskHandle { receiver: rx })
     }
 
+    /// 内部提交逻辑（含拒绝策略分发）。
     fn submit(
         &self,
         priority: Priority,
@@ -294,6 +339,7 @@ impl ThreadPool {
         Ok(())
     }
 
+    /// 获取线程池当前统计（近似值）。
     pub fn stats(&self) -> PoolStats {
         let inner = self.inner();
         let s = inner.state.stats.snapshot();
@@ -303,6 +349,15 @@ impl ThreadPool {
         }
     }
 
+    /// 优雅关闭：不再接受新任务，等待已有任务完成。
+    ///
+    /// # 示例
+    /// ```
+    /// # use concurrency::thread_pool::ThreadPool;
+    /// let pool = ThreadPool::new(2);
+    /// pool.shutdown();
+    /// assert!(pool.is_shutdown());
+    /// ```
     pub fn shutdown(&self) {
         if let Some(ref inner) = self.inner {
             inner.state.shutdown.store(true, Ordering::Release);
@@ -312,6 +367,7 @@ impl ThreadPool {
         }
     }
 
+    /// 立即关闭：丢弃所有未执行任务，强制 Worker 退出。
     pub fn shutdown_now(&self) {
         if let Some(ref inner) = self.inner {
             inner.state.shutdown.store(true, Ordering::Release);
@@ -322,6 +378,7 @@ impl ThreadPool {
         }
     }
 
+    /// 池是否已关闭（含 `shutdown_now`）。
     pub fn is_shutdown(&self) -> bool {
         self.inner.as_ref().is_none_or(|inner| {
             inner.state.shutdown.load(Ordering::Acquire)
@@ -329,6 +386,8 @@ impl ThreadPool {
         })
     }
 
+    /// 阻塞等待所有 Worker 退出。
+    /// 调用后线程池不可再用。
     pub fn await_termination(&mut self) {
         if let Some(ref inner) = self.inner {
             inner.state.shutdown.store(true, Ordering::Release);
@@ -339,6 +398,7 @@ impl ThreadPool {
         self.inner.take();
     }
 
+    /// 带超时的 `await_termination`。超时返回 `Err(())`。
     #[allow(clippy::result_unit_err)]
     pub fn await_termination_timeout(&mut self, timeout: Duration) -> Result<(), ()> {
         let start = Instant::now();
@@ -379,6 +439,7 @@ impl Drop for ThreadPool {
     }
 }
 
+/// 将 Priority(0..255) 映射到 Injector 数组索引。
 fn priority_index(p: Priority, levels: usize) -> usize {
     let idx = (p.into_inner() as usize) * levels / 256;
     idx.min(levels - 1)
@@ -415,7 +476,6 @@ mod tests {
             })?;
         }
         pool.shutdown();
-        // Wait for all tasks to finish
         thread::sleep(Duration::from_millis(500));
         assert_eq!(counter.load(Ordering::SeqCst), n);
         Ok(())
@@ -446,7 +506,6 @@ mod tests {
         pool.shutdown();
         thread::sleep(Duration::from_millis(500));
         let results = results.lock().unwrap();
-        // All HIGHEST priority tasks (5-9) must appear before LOWEST (0-4)
         let last_high = results.iter().rposition(|&x| x >= 5).unwrap();
         let first_low = results.iter().position(|&x| x < 5).unwrap();
         assert!(last_high < first_low);
@@ -463,7 +522,6 @@ mod tests {
             .rejection_policy(RejectionPolicy::Abort)
             .build();
 
-        // Fill the one capacity slot
         let barrier = Arc::new(std::sync::Barrier::new(2));
         let b = Arc::clone(&barrier);
         pool.exec(move || {
@@ -472,11 +530,9 @@ mod tests {
         })
         .unwrap();
 
-        // Wait for the task to start (so pending = 1)
         b.wait();
         thread::sleep(Duration::from_millis(20));
 
-        // Now try_exec should fail
         for _ in 0..5 {
             let result = pool.try_exec(|| {});
             assert!(result.is_err());

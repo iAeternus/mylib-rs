@@ -1,15 +1,23 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// 线程池快照统计。
 #[derive(Debug, Clone, Copy)]
 pub struct PoolStats {
+    /// 累计提交数
     pub submitted: usize,
+    /// 当前执行中
     pub running: usize,
+    /// 累计完成数
     pub completed: usize,
+    /// 被拒绝数
     pub rejected: usize,
+    /// 崩溃任务数
     pub panicked: usize,
+    /// 尚未完成数（= submitted - completed）
     pub pending: usize,
 }
 
+/// 线程安全的共享计数器（原子操作）。
 pub(crate) struct SharedStats {
     submitted: AtomicUsize,
     running: AtomicUsize,
@@ -50,6 +58,7 @@ impl SharedStats {
         self.panicked.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// 取快照（Relaxed 顺序，各计数器间可能不一致）。
     pub fn snapshot(&self) -> PoolStats {
         PoolStats {
             submitted: self.submitted.load(Ordering::Relaxed),

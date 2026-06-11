@@ -8,6 +8,7 @@ use crossbeam_deque::{Injector, Steal, Stealer, Worker};
 
 use crate::thread_pool::pool::{PoolState, Task};
 
+/// 按优先级查找任务：local LIFO -> 高优 Injector -> 低优 Injector -> 窃取其他 Worker。
 pub(super) fn find_work(
     local: &Worker<Task>,
     injectors: &[Injector<Task>],
@@ -41,6 +42,7 @@ pub(super) fn find_work(
     None
 }
 
+/// Worker 主循环：找任务 -> 执行 -> 统计 -> 循环，空闲时 park。
 pub(super) fn worker_loop(
     id: usize,
     local: Worker<Task>,
@@ -84,7 +86,7 @@ pub(super) fn worker_loop(
             }
             Err(e) => {
                 state.stats.task_panicked();
-                eprintln!("[worker-{}] task panicked: {:?}", id, e);
+                eprintln!("[worker-{}] 任务崩溃: {:?}", id, e);
             }
         }
 

@@ -1,3 +1,5 @@
+//! 基于工作窃取的多级优先级线程池。
+
 pub mod builder;
 pub mod config;
 pub mod pool;
