@@ -5,12 +5,17 @@ pub struct PoolStats {
     pub submitted: usize,
     pub running: usize,
     pub completed: usize,
+    pub rejected: usize,
+    pub panicked: usize,
+    pub pending: usize,
 }
 
 pub(crate) struct SharedStats {
     submitted: AtomicUsize,
     running: AtomicUsize,
     completed: AtomicUsize,
+    rejected: AtomicUsize,
+    panicked: AtomicUsize,
 }
 
 impl SharedStats {
@@ -19,6 +24,8 @@ impl SharedStats {
             submitted: AtomicUsize::new(0),
             running: AtomicUsize::new(0),
             completed: AtomicUsize::new(0),
+            rejected: AtomicUsize::new(0),
+            panicked: AtomicUsize::new(0),
         }
     }
 
@@ -35,11 +42,23 @@ impl SharedStats {
         self.completed.fetch_add(1, Ordering::Relaxed);
     }
 
+    pub(crate) fn task_rejected(&self) {
+        self.rejected.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn task_panicked(&self) {
+        self.panicked.fetch_add(1, Ordering::Relaxed);
+    }
+
     pub fn snapshot(&self) -> PoolStats {
         PoolStats {
             submitted: self.submitted.load(Ordering::Relaxed),
             running: self.running.load(Ordering::Relaxed),
             completed: self.completed.load(Ordering::Relaxed),
+            rejected: self.rejected.load(Ordering::Relaxed),
+            panicked: self.panicked.load(Ordering::Relaxed),
+            pending: self.submitted.load(Ordering::Relaxed)
+                - self.completed.load(Ordering::Relaxed),
         }
     }
 }

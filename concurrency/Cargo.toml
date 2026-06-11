@@ -9,3 +9,5 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
+crossbeam-channel = "0.5"
+crossbeam-deque = "0.8"
