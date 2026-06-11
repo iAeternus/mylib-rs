@@ -1,7 +1,4 @@
-use std::{
-    fmt::Display,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug, Clone, Copy)]
 pub struct PoolStats {
