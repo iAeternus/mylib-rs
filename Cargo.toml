@@ -7,7 +7,7 @@ repository = "https://github.com/iAeternus/mylib-rs.git"
 homepage = "https://github.com/iAeternus"
 
 [workspace]
-members = ["algods", "macros", "mylib-rs", "num", "xtask"]
+members = ["algods", "concurrency", "macros", "mylib-rs", "num", "xtask"]
 resolver = "3"
 
 [profile.bench]
